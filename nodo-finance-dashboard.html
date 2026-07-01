@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nodo Tech & Growth | Dashboard Financiero</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              nodo: {
+                bg: "#0B0F19",
+                panel: "#111827",
+                panel2: "#151B2B",
+                line: "#27314A",
+                purple: "#A855F7",
+                neon: "#C084FC",
+                violet: "#7C3AED",
+                green: "#39FF88",
+                cyan: "#22D3EE",
+                amber: "#FBBF24"
+              }
+            },
+            boxShadow: {
+              glow: "0 0 34px rgba(168, 85, 247, 0.28)",
+              soft: "0 16px 44px rgba(0, 0, 0, 0.32)"
+            }
+          }
+        }
+      };
+    </script>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: #0B0F19;
+        color: #E5E7EB;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      .scrollbar-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+      .scrollbar-thin::-webkit-scrollbar-thumb { background: #27314A; border-radius: 999px; }
+      .metric-grid { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useMemo, useState } = React;
+
+      const currency = new Intl.NumberFormat("es-CO", {
+        style: "currency",
+        currency: "COP",
+        maximumFractionDigits: 0
+      });
+
+      const seedMetrics = {
+        sales: 72800000,
+        opex: 24100000,
+        debtPayment: 8600000,
+        techAssets: 94800000,
+        debtBalance: 57400000,
+        capitalFund: 132000000,
+        previousSales: 64100000,
+        previousOpex: 22900000,
+        previousDebtPayment: 8100000,
+        previousTechAssets: 88700000,
+        previousDebtBalance: 62800000,
+        previousCapitalFund: 145000000
+      };
+
+      const initialCampaigns = [
+        { name: "Diagnóstico Growth Q3", platform: "Meta Ads", investment: 6200000, leads: 148, conversions: 13, revenue: 28600000 },
+        { name: "B2B SaaS Sprint", platform: "LinkedIn", investment: 9300000, leads: 64, conversions: 7, revenue: 38200000 },
+        { name: "Automatización Local", platform: "Google Ads", investment: 4800000, leads: 119, conversions: 5, revenue: 12400000 },
+        { name: "Contenido Founder-Led", platform: "Orgánico", investment: 1200000, leads: 52, conversions: 6, revenue: 16800000 }
+      ];
+
+      const navItems = [
+        ["Resumen General", "M3 4h18v2H3v2h18Zm-6 5H3v2h12V9Zm6 5H3v2h18v-2Z"],
+        ["Ventas (Ingresos)", "M4 19V5h2v14H4Zm5 0V9h2v10H9Zm5 0V3h2v16h-2Zm5 0v-7h2v7h-2Z"],
+        ["Operación (OPEX)", "M12 2 2 7l10 5 10-5-10-5Zm0 12L2 9v8l10 5 10-5V9l-10 5Z"],
+        ["Activos Fijos (CAPEX)", "M4 5h16v10H4V5Zm2 2v6h12V7H6Zm4 10h4l1 2H9l1-2Z"],
+        ["Deudas y Pasivos", "M6 3h12v18H6V3Zm2 4h8V5H8v2Zm0 4h8V9H8v2Zm0 4h5v-2H8v2Zm8 4h-3v-2h3v2Z"],
+        ["Flujo de Caja", "M3 7h13a3 3 0 0 1 0 6H8a1 1 0 0 0 0 2h13v2H8a3 3 0 0 1 0-6h8a1 1 0 0 0 0-2H3V7Z"],
+        ["Capital e Inversores", "M12 3 3 8v2h18V8l-9-5ZM5 12v7H3v2h18v-2h-2v-7h-2v7h-3v-7h-2v7H9v-7H7v7H5v-7Z"],
+        ["Marketing ROI (Pauta)", "M3 11h4l5-7 5 14 4-7h-4l-3 5-5-14-5 7H3v2Z"],
+        ["Redes Sociales", "M7 8a4 4 0 1 1 7.5 1.9l4.1 2.4A4 4 0 1 1 17 15.9l-4.1-2.4A4 4 0 1 1 7 8Z"]
+      ];
+
+      function Icon({ path, className = "h-5 w-5" }) {
+        return (
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
+            <path d={path} />
+          </svg>
+        );
+      }
+
+      function Sidebar() {
+        return (
+          <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 border-r border-nodo-line bg-[#080C15]/95 px-4 py-5 backdrop-blur lg:block">
+            <div className="mb-8 flex items-center gap-3 px-2">
+              <div className="grid h-11 w-11 place-items-center rounded-lg bg-nodo-violet shadow-glow">
+                <span className="text-lg font-black tracking-wide text-white">N</span>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">Nodo Tech & Growth</p>
+                <p className="text-xs text-slate-400">Finance Control Room</p>
+              </div>
+            </div>
+            <nav className="space-y-1">
+              {navItems.map(([label, path], index) => (
+                <a
+                  key={label}
+                  href={index === 8 ? "#social" : index === 7 ? "#marketing" : "#overview"}
+                  className={`flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition ${
+                    index === 0
+                      ? "bg-nodo-violet text-white shadow-glow"
+                      : "text-slate-300 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <Icon path={path} className="h-5 w-5 shrink-0" />
+                  <span className="leading-tight">{label}</span>
+                </a>
+              ))}
+            </nav>
+            <div className="absolute bottom-5 left-4 right-4 rounded-lg border border-nodo-line bg-nodo-panel p-4">
+              <p className="text-xs uppercase tracking-[0.22em] text-nodo-neon">Reglas activas</p>
+              <p className="mt-2 text-sm leading-5 text-slate-300">
+                Inversión externa aislada de ventas. CAPEX financiado abre pasivo y no castiga OPEX.
+              </p>
+            </div>
+          </aside>
+        );
+      }
+
+      function Header() {
+        return (
+          <header className="sticky top-0 z-10 border-b border-nodo-line bg-nodo-bg/88 px-4 py-4 backdrop-blur md:px-8">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.24em] text-nodo-neon">Resumen General</p>
+                <h1 className="mt-1 text-2xl font-semibold text-white md:text-3xl">Dashboard financiero ejecutivo</h1>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="rounded-lg border border-nodo-line bg-nodo-panel px-3 py-2 text-sm text-slate-300">Julio 2026</span>
+                <button className="rounded-lg bg-nodo-violet px-4 py-2 text-sm font-semibold text-white shadow-glow transition hover:bg-nodo-purple">
+                  Exportar reporte
+                </button>
+              </div>
+            </div>
+          </header>
+        );
+      }
+
+      function delta(current, previous) {
+        if (!previous) return 0;
+        return ((current - previous) / previous) * 100;
+      }
+
+      function MetricCard({ title, value, previous, tone = "purple", formula }) {
+        const change = delta(value, previous);
+        const positive = change >= 0;
+        const color = tone === "green" ? "text-nodo-green" : tone === "cyan" ? "text-nodo-cyan" : tone === "amber" ? "text-nodo-amber" : "text-nodo-neon";
+        return (
+          <article className="rounded-lg border border-nodo-line bg-nodo-panel p-5 shadow-soft">
+            <div className="flex items-start justify-between gap-4">
+              <p className="text-sm font-medium text-slate-300">{title}</p>
+              <span className={`rounded-md px-2 py-1 text-xs font-semibold ${positive ? "bg-emerald-400/10 text-nodo-green" : "bg-red-400/10 text-red-300"}`}>
+                {positive ? "↑" : "↓"} {Math.abs(change).toFixed(1)}%
+              </span>
+            </div>
+            <p className={`mt-4 text-2xl font-bold tracking-tight ${color}`}>{value < 1000 ? value.toFixed(1) : currency.format(value)}</p>
+            {formula && <p className="mt-3 text-xs leading-5 text-slate-500">{formula}</p>}
+          </article>
+        );
+      }
+
+      function Overview() {
+        const operatingProfit = seedMetrics.sales - seedMetrics.opex;
+        const previousOperatingProfit = seedMetrics.previousSales - seedMetrics.previousOpex;
+        const freeCashFlow = operatingProfit - seedMetrics.debtPayment;
+        const previousFreeCashFlow = previousOperatingProfit - seedMetrics.previousDebtPayment;
+        const runway = freeCashFlow < 0 ? seedMetrics.capitalFund / Math.abs(freeCashFlow) : 18.5;
+        const previousRunway = previousFreeCashFlow < 0 ? seedMetrics.previousCapitalFund / Math.abs(previousFreeCashFlow) : 15.2;
+
+        return (
+          <section id="overview" className="px-4 py-6 md:px-8">
+            <div className="grid metric-grid gap-4">
+              <MetricCard title="Ventas Totales" value={seedMetrics.sales} previous={seedMetrics.previousSales} tone="green" />
+              <MetricCard title="Gastos Operativos (OPEX)" value={seedMetrics.opex} previous={seedMetrics.previousOpex} tone="amber" />
+              <MetricCard title="Utilidad Operativa" value={operatingProfit} previous={previousOperatingProfit} tone="cyan" formula="Ventas Totales - Gastos Operativos" />
+              <MetricCard title="Pago de Deuda Mensual" value={seedMetrics.debtPayment} previous={seedMetrics.previousDebtPayment} />
+              <MetricCard title="Flujo de Caja Libre" value={freeCashFlow} previous={previousFreeCashFlow} tone="green" formula="Utilidad Operativa - Pago de Deuda Mensual" />
+              <MetricCard title="Total Activos Tecnológicos" value={seedMetrics.techAssets} previous={seedMetrics.previousTechAssets} tone="cyan" />
+              <MetricCard title="Saldo Pendiente de Deuda" value={seedMetrics.debtBalance} previous={seedMetrics.previousDebtBalance} tone="amber" />
+              <MetricCard title="Fondo de Capital Disponible" value={seedMetrics.capitalFund} previous={seedMetrics.previousCapitalFund} />
+              <MetricCard title="Start-up Runway" value={runway} previous={previousRunway} tone="green" formula="Si FCL es negativo: Fondo de Capital / quema mensual" />
+            </div>
+          </section>
+        );
+      }
+
+      function CampaignForm({ onAdd }) {
+        const [form, setForm] = useState({
+          name: "",
+          platform: "Meta Ads",
+          investment: "",
+          leads: "",
+          conversions: "",
+          revenue: ""
+        });
+
+        function update(field, value) {
+          setForm((current) => ({ ...current, [field]: value }));
+        }
+
+        function submit(event) {
+          event.preventDefault();
+          if (!form.name.trim()) return;
+          onAdd({
+            name: form.name.trim(),
+            platform: form.platform,
+            investment: Number(form.investment || 0),
+            leads: Number(form.leads || 0),
+            conversions: Number(form.conversions || 0),
+            revenue: Number(form.revenue || 0)
+          });
+          setForm({ name: "", platform: "Meta Ads", investment: "", leads: "", conversions: "", revenue: "" });
+        }
+
+        const fieldClass = "h-11 rounded-lg border border-nodo-line bg-[#0D1321] px-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-nodo-neon";
+        return (
+          <form onSubmit={submit} className="grid gap-3 rounded-lg border border-nodo-line bg-nodo-panel p-4 md:grid-cols-6">
+            <input className={`${fieldClass} md:col-span-2`} placeholder="Nombre de la campaña" value={form.name} onChange={(e) => update("name", e.target.value)} />
+            <select className={fieldClass} value={form.platform} onChange={(e) => update("platform", e.target.value)}>
+              {["Meta Ads", "Google Ads", "LinkedIn", "TikTok", "Orgánico"].map((platform) => <option key={platform}>{platform}</option>)}
+            </select>
+            <input className={fieldClass} type="number" min="0" placeholder="Presupuesto $" value={form.investment} onChange={(e) => update("investment", e.target.value)} />
+            <input className={fieldClass} type="number" min="0" placeholder="Leads" value={form.leads} onChange={(e) => update("leads", e.target.value)} />
+            <input className={fieldClass} type="number" min="0" placeholder="Conversiones" value={form.conversions} onChange={(e) => update("conversions", e.target.value)} />
+            <input className={`${fieldClass} md:col-span-2`} type="number" min="0" placeholder="Facturación total $" value={form.revenue} onChange={(e) => update("revenue", e.target.value)} />
+            <button className="h-11 rounded-lg bg-nodo-violet px-4 text-sm font-semibold text-white shadow-glow transition hover:bg-nodo-purple md:col-span-4">
+              Registrar campaña y calcular ROI
+            </button>
+          </form>
+        );
+      }
+
+      function campaignStats(campaign) {
+        const cpl = campaign.leads ? campaign.investment / campaign.leads : 0;
+        const conversionRate = campaign.leads ? (campaign.conversions / campaign.leads) * 100 : 0;
+        const roas = campaign.investment ? campaign.revenue / campaign.investment : 0;
+        return { cpl, conversionRate, roas };
+      }
+
+      function MarketingTable({ campaigns }) {
+        return (
+          <div className="overflow-hidden rounded-lg border border-nodo-line bg-nodo-panel">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-white/[0.03] text-xs uppercase tracking-[0.14em] text-slate-400">
+                  <tr>
+                    <th className="px-4 py-3">Campaña</th>
+                    <th className="px-4 py-3">Plataforma</th>
+                    <th className="px-4 py-3">Inversión</th>
+                    <th className="px-4 py-3">Leads</th>
+                    <th className="px-4 py-3">Clientes</th>
+                    <th className="px-4 py-3">CPL</th>
+                    <th className="px-4 py-3">Conv.</th>
+                    <th className="px-4 py-3">ROAS</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-nodo-line">
+                  {campaigns.map((campaign) => {
+                    const stats = campaignStats(campaign);
+                    const winner = stats.roas > 3;
+                    return (
+                      <tr key={`${campaign.name}-${campaign.platform}`} className={winner ? "bg-emerald-400/[0.06]" : ""}>
+                        <td className="px-4 py-4 font-medium text-white">{campaign.name}</td>
+                        <td className="px-4 py-4 text-slate-300">{campaign.platform}</td>
+                        <td className="px-4 py-4 text-slate-300">{currency.format(campaign.investment)}</td>
+                        <td className="px-4 py-4 text-slate-300">{campaign.leads}</td>
+                        <td className="px-4 py-4 text-slate-300">{campaign.conversions}</td>
+                        <td className="px-4 py-4 text-slate-300">{currency.format(stats.cpl)}</td>
+                        <td className="px-4 py-4 text-slate-300">{stats.conversionRate.toFixed(1)}%</td>
+                        <td className={`px-4 py-4 font-bold ${winner ? "text-nodo-green" : "text-nodo-neon"}`}>{stats.roas.toFixed(2)}x</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      }
+
+      function RoiChart({ campaigns }) {
+        const maxValue = Math.max(...campaigns.flatMap((campaign) => [campaign.investment, campaign.revenue]), 1);
+        return (
+          <div className="rounded-lg border border-nodo-line bg-nodo-panel p-5">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <h2 className="text-lg font-semibold text-white">Inversión vs Facturación</h2>
+              <div className="flex gap-4 text-xs text-slate-400">
+                <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-full bg-nodo-neon"></i>Inversión</span>
+                <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-full bg-nodo-green"></i>Facturación</span>
+              </div>
+            </div>
+            <div className="space-y-4">
+              {campaigns.map((campaign) => (
+                <div key={`chart-${campaign.name}`} className="grid gap-2 md:grid-cols-[160px_1fr] md:items-center">
+                  <p className="truncate text-sm text-slate-300">{campaign.name}</p>
+                  <div className="space-y-2">
+                    <div className="h-3 rounded-full bg-white/[0.05]">
+                      <div className="h-3 rounded-full bg-nodo-neon" style={{ width: `${(campaign.investment / maxValue) * 100}%` }}></div>
+                    </div>
+                    <div className="h-3 rounded-full bg-white/[0.05]">
+                      <div className="h-3 rounded-full bg-nodo-green" style={{ width: `${(campaign.revenue / maxValue) * 100}%` }}></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
+      function MarketingRoi() {
+        const [campaigns, setCampaigns] = useState(initialCampaigns);
+        const totals = useMemo(() => {
+          const investment = campaigns.reduce((sum, campaign) => sum + campaign.investment, 0);
+          const revenue = campaigns.reduce((sum, campaign) => sum + campaign.revenue, 0);
+          return { investment, revenue, roas: investment ? revenue / investment : 0 };
+        }, [campaigns]);
+
+        return (
+          <section id="marketing" className="px-4 py-6 md:px-8">
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.24em] text-nodo-neon">Marketing ROI</p>
+                <h2 className="mt-1 text-2xl font-semibold text-white">Pauta, leads y rentabilidad por campaña</h2>
+              </div>
+              <div className="rounded-lg border border-nodo-line bg-nodo-panel px-4 py-3">
+                <p className="text-xs text-slate-500">ROAS consolidado</p>
+                <p className="text-xl font-bold text-nodo-green">{totals.roas.toFixed(2)}x</p>
+              </div>
+            </div>
+            <div className="grid gap-4">
+              <CampaignForm onAdd={(campaign) => setCampaigns((current) => [campaign, ...current])} />
+              <RoiChart campaigns={campaigns} />
+              <MarketingTable campaigns={campaigns} />
+            </div>
+          </section>
+        );
+      }
+
+      function SocialSnapshot() {
+        const rows = [
+          ["LinkedIn", "+18.4%", "6.9%", "42 SQL atribuidos"],
+          ["Instagram", "+11.2%", "4.8%", "19 demos asistidas"],
+          ["TikTok", "+27.6%", "8.1%", "12 leads orgánicos"],
+          ["YouTube", "+9.7%", "5.3%", "7 oportunidades enterprise"]
+        ];
+        return (
+          <section id="social" className="px-4 pb-10 pt-6 md:px-8">
+            <div className="rounded-lg border border-nodo-line bg-nodo-panel p-5">
+              <p className="text-xs uppercase tracking-[0.24em] text-nodo-neon">Redes Sociales</p>
+              <h2 className="mt-1 text-xl font-semibold text-white">Crecimiento orgánico y engagement</h2>
+              <div className="mt-5 grid gap-3 md:grid-cols-4">
+                {rows.map(([network, growth, engagement, note]) => (
+                  <div key={network} className="rounded-lg border border-nodo-line bg-nodo-panel2 p-4">
+                    <p className="font-semibold text-white">{network}</p>
+                    <p className="mt-3 text-2xl font-bold text-nodo-cyan">{growth}</p>
+                    <p className="text-sm text-slate-400">Engagement {engagement}</p>
+                    <p className="mt-3 text-xs text-slate-500">{note}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      function App() {
+        return (
+          <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(124,58,237,0.22),transparent_34%),#0B0F19]">
+            <Sidebar />
+            <main className="lg:pl-72">
+              <Header />
+              <div className="scrollbar-thin">
+                <Overview />
+                <MarketingRoi />
+                <SocialSnapshot />
+              </div>
+            </main>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
+</html>

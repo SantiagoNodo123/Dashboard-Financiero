@@ -1,0 +1,64 @@
+{
+  "entities": {
+    "sales_contracts": {
+      "purpose": "Operational revenue contracts only. Investor capital is never stored here.",
+      "keyFields": ["client_id", "revenue_type", "monthly_recurring_amount", "total_contract_value", "status"]
+    },
+    "invoices": {
+      "purpose": "Recognized and collected operating revenue by fiscal period.",
+      "keyFields": ["sales_contract_id", "fiscal_period_id", "amount", "status", "paid_at"]
+    },
+    "opex_expenses": {
+      "purpose": "Daily operating expenses such as AI subscriptions, recurring ads, automation tools and consumables.",
+      "keyFields": ["fiscal_period_id", "category_id", "vendor", "amount", "expense_date"]
+    },
+    "fixed_assets": {
+      "purpose": "High-value technology infrastructure such as laptops, screens and professional audio gear.",
+      "keyFields": ["asset_name", "asset_type", "purchase_value", "useful_life_months", "financed"]
+    },
+    "liabilities": {
+      "purpose": "Debt opened by credit cards, personal loans or financing used for fixed assets.",
+      "keyFields": ["fixed_asset_id", "principal_amount", "outstanding_balance", "annual_interest_rate", "status"]
+    },
+    "liability_payments": {
+      "purpose": "Debt amortization schedule. Principal reduces liability; interest affects operating result.",
+      "keyFields": ["liability_id", "total_payment", "principal_component", "interest_component"]
+    },
+    "capital_fund_transactions": {
+      "purpose": "Isolated founder, angel or venture capital movements. Excluded from total sales.",
+      "keyFields": ["investor_name", "transaction_type", "amount", "transaction_date"]
+    },
+    "marketing_campaigns": {
+      "purpose": "Manual or automated ROI tracking by channel.",
+      "keyFields": ["campaign_name", "platform", "investment_amount", "leads_count", "conversions_count", "attributed_revenue"]
+    },
+    "social_metrics": {
+      "purpose": "Organic growth and engagement per social network.",
+      "keyFields": ["network", "followers_start", "followers_end", "engagement_rate", "leads_attributed"]
+    }
+  },
+  "computedMetrics": {
+    "totalSales": "SUM(invoices.amount WHERE status = 'paid')",
+    "operatingOpex": "SUM(opex_expenses.amount) + SUM(liability_payments.interest_component)",
+    "operatingProfit": "totalSales - operatingOpex",
+    "monthlyDebtPayment": "SUM(liability_payments.total_payment)",
+    "freeCashFlow": "operatingProfit - monthlyDebtPayment",
+    "totalTechAssets": "SUM(fixed_assets.purchase_value WHERE status = 'active')",
+    "debtBalance": "SUM(liabilities.outstanding_balance WHERE status = 'active')",
+    "capitalFundAvailable": "capital inflows - capital withdrawals",
+    "runwayMonths": "IF freeCashFlow < 0 THEN capitalFundAvailable / ABS(freeCashFlow) ELSE healthy/positive runway",
+    "costPerLead": "marketing_campaigns.investment_amount / marketing_campaigns.leads_count",
+    "conversionRate": "(marketing_campaigns.conversions_count / marketing_campaigns.leads_count) * 100",
+    "roas": "marketing_campaigns.attributed_revenue / marketing_campaigns.investment_amount"
+  },
+  "accountingRules": [
+    {
+      "name": "Financed CAPEX",
+      "rule": "A financed asset is recorded at full value in fixed_assets and simultaneously creates a liabilities row. Monthly payments split principal and interest. Principal reduces outstanding_balance; interest is the only portion counted as OPEX."
+    },
+    {
+      "name": "External investment isolation",
+      "rule": "Founder, angel and VC capital is stored only in capital_fund_transactions. It must not be joined into totalSales or operating revenue."
+    }
+  ]
+}
