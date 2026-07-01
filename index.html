@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nodo Tech & Growth | Dashboard Financiero</title>
+    <title>Nodo Tech & Growth | Dashboard Financiero Interactivo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -44,14 +44,14 @@
       }
       .scrollbar-thin::-webkit-scrollbar { width: 8px; height: 8px; }
       .scrollbar-thin::-webkit-scrollbar-thumb { background: #27314A; border-radius: 999px; }
-      .metric-grid { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+      .metric-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
     </style>
   </head>
   <body>
     <div id="root"></div>
 
     <script type="text/babel">
-      const { useMemo, useState } = React;
+      const { useMemo, useState, useEffect } = React;
 
       const currency = new Intl.NumberFormat("es-CO", {
         style: "currency",
@@ -59,38 +59,64 @@
         maximumFractionDigits: 0
       });
 
-      const seedMetrics = {
-        sales: 72800000,
-        opex: 24100000,
-        debtPayment: 8600000,
-        techAssets: 94800000,
-        debtBalance: 57400000,
-        capitalFund: 132000000,
-        previousSales: 64100000,
-        previousOpex: 22900000,
-        previousDebtPayment: 8100000,
-        previousTechAssets: 88700000,
-        previousDebtBalance: 62800000,
-        previousCapitalFund: 145000000
+      // --- DATO SEMILLA INICIAL ---
+      const defaultSeed = {
+        clients: [
+          { id: 1, name: "Acme Corp", industry: "SaaS Enterprise" },
+          { id: 2, name: "Globex Inc", industry: "Growth Consulting" }
+        ],
+        contracts: [
+          { id: 1, clientId: 1, name: "Contrato Anual SaaS", type: "recurring", mrr: 10000000, tcv: 120000000, status: "active" },
+          { id: 2, clientId: 2, name: "Consultoría Growth One-Time", type: "one_time", mrr: 0, tcv: 12800000, status: "active" }
+        ],
+        invoices: [
+          { id: 1, contractId: 1, amount: 60000000, status: "paid", paidAt: "2026-06-15" },
+          { id: 2, contractId: 2, amount: 12800000, status: "paid", paidAt: "2026-06-20" },
+          { id: 3, contractId: 1, amount: 10000000, status: "issued", paidAt: "" }
+        ],
+        opex: [
+          { id: 1, category: "Suscripciones IA", vendor: "OpenAI", amount: 3500000, date: "2026-06-10" },
+          { id: 2, category: "Cloud Hosting", vendor: "AWS", amount: 8000000, date: "2026-06-12" },
+          { id: 3, category: "Marketing Pauta", vendor: "Meta Ads", amount: 11000000, date: "2026-06-15" }
+        ],
+        assets: [
+          { id: 1, name: "Servidores & Desarrollo", type: "laptop", value: 64800000, financed: true, status: "active" },
+          { id: 2, name: "Equipos Audiovisuales Sala A", type: "audio", value: 30000000, financed: false, status: "active" }
+        ],
+        liabilities: [
+          { id: 1, assetId: 1, lender: "Banco Tech", type: "bank_loan", principal: 64800000, outstanding: 57400000, rate: 12, status: "active" }
+        ],
+        payments: [
+          { id: 1, liabilityId: 1, total: 8600000, principal: 7000000, interest: 1600000, date: "2026-06-25" }
+        ],
+        capital: [
+          { id: 1, investor: "Socio Fundador", type: "founder_contribution", amount: 50000000, date: "2026-05-01" },
+          { id: 2, investor: "Fondo Inversor Ángel", type: "angel_round", amount: 82000000, date: "2026-05-15" }
+        ],
+        campaigns: [
+          { id: 1, name: "Diagnóstico Growth Q3", platform: "Meta Ads", investment: 6200000, leads: 148, conversions: 13, revenue: 28600000 },
+          { id: 2, name: "B2B SaaS Sprint", platform: "LinkedIn", investment: 9300000, leads: 64, conversions: 7, revenue: 38200000 },
+          { id: 3, name: "Automatización Local", platform: "Google Ads", investment: 4800000, leads: 119, conversions: 5, revenue: 12400000 },
+          { id: 4, name: "Contenido Founder-Led", platform: "Orgánico", investment: 1200000, leads: 52, conversions: 6, revenue: 16800000 }
+        ],
+        social: [
+          { id: 1, network: "LinkedIn", start: 5000, end: 6000, engagement: 6.9, leads: 42 },
+          { id: 2, network: "Instagram", start: 8000, end: 9000, engagement: 4.8, leads: 19 },
+          { id: 3, network: "TikTok", start: 2000, end: 3000, engagement: 8.1, leads: 12 },
+          { id: 4, network: "YouTube", start: 1500, end: 1800, engagement: 5.3, leads: 7 }
+        ]
       };
 
-      const initialCampaigns = [
-        { name: "Diagnóstico Growth Q3", platform: "Meta Ads", investment: 6200000, leads: 148, conversions: 13, revenue: 28600000 },
-        { name: "B2B SaaS Sprint", platform: "LinkedIn", investment: 9300000, leads: 64, conversions: 7, revenue: 38200000 },
-        { name: "Automatización Local", platform: "Google Ads", investment: 4800000, leads: 119, conversions: 5, revenue: 12400000 },
-        { name: "Contenido Founder-Led", platform: "Orgánico", investment: 1200000, leads: 52, conversions: 6, revenue: 16800000 }
-      ];
-
       const navItems = [
-        ["Resumen General", "M3 4h18v2H3v2h18Zm-6 5H3v2h12V9Zm6 5H3v2h18v-2Z"],
-        ["Ventas (Ingresos)", "M4 19V5h2v14H4Zm5 0V9h2v10H9Zm5 0V3h2v16h-2Zm5 0v-7h2v7h-2Z"],
-        ["Operación (OPEX)", "M12 2 2 7l10 5 10-5-10-5Zm0 12L2 9v8l10 5 10-5V9l-10 5Z"],
-        ["Activos Fijos (CAPEX)", "M4 5h16v10H4V5Zm2 2v6h12V7H6Zm4 10h4l1 2H9l1-2Z"],
-        ["Deudas y Pasivos", "M6 3h12v18H6V3Zm2 4h8V5H8v2Zm0 4h8V9H8v2Zm0 4h5v-2H8v2Zm8 4h-3v-2h3v2Z"],
-        ["Flujo de Caja", "M3 7h13a3 3 0 0 1 0 6H8a1 1 0 0 0 0 2h13v2H8a3 3 0 0 1 0-6h8a1 1 0 0 0 0-2H3V7Z"],
-        ["Capital e Inversores", "M12 3 3 8v2h18V8l-9-5ZM5 12v7H3v2h18v-2h-2v-7h-2v7h-3v-7h-2v7H9v-7H7v7H5v-7Z"],
-        ["Marketing ROI (Pauta)", "M3 11h4l5-7 5 14 4-7h-4l-3 5-5-14-5 7H3v2Z"],
-        ["Redes Sociales", "M7 8a4 4 0 1 1 7.5 1.9l4.1 2.4A4 4 0 1 1 17 15.9l-4.1-2.4A4 4 0 1 1 7 8Z"]
+        { id: "overview", label: "Resumen General", path: "M3 4h18v2H3v2h18Zm-6 5H3v2h12V9Zm6 5H3v2h18v-2Z" },
+        { id: "sales", label: "Ventas (Ingresos)", path: "M4 19V5h2v14H4Zm5 0V9h2v10H9Zm5 0V3h2v16h-2Zm5 0v-7h2v7h-2Z" },
+        { id: "opex", label: "Operación (OPEX)", path: "M12 2 2 7l10 5 10-5-10-5Zm0 12L2 9v8l10 5 10-5V9l-10 5Z" },
+        { id: "capex", label: "Activos Fijos (CAPEX)", path: "M4 5h16v10H4V5Zm2 2v6h12V7H6Zm4 10h4l1 2H9l1-2Z" },
+        { id: "debt", label: "Deudas y Pasivos", path: "M6 3h12v18H6V3Zm2 4h8V5H8v2Zm0 4h8V9H8v2Zm0 4h5v-2H8v2Zm8 4h-3v-2h3v2Z" },
+        { id: "cashflow", label: "Flujo de Caja", path: "M3 7h13a3 3 0 0 1 0 6H8a1 1 0 0 0 0 2h13v2H8a3 3 0 0 1 0-6h8a1 1 0 0 0 0-2H3V7Z" },
+        { id: "capital", label: "Capital e Inversores", path: "M12 3 3 8v2h18V8l-9-5ZM5 12v7H3v2h18v-2h-2v-7h-2v7h-3v-7h-2v7H9v-7H7v7H5v-7Z" },
+        { id: "marketing", label: "Marketing ROI (Pauta)", path: "M3 11h4l5-7 5 14 4-7h-4l-3 5-5-14-5 7H3v2Z" },
+        { id: "social", label: "Redes Sociales", path: "M7 8a4 4 0 1 1 7.5 1.9l4.1 2.4A4 4 0 1 1 17 15.9l-4.1-2.4A4 4 0 1 1 7 8Z" }
       ];
 
       function Icon({ path, className = "h-5 w-5" }) {
@@ -101,303 +127,1335 @@
         );
       }
 
-      function Sidebar() {
-        return (
-          <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 border-r border-nodo-line bg-[#080C15]/95 px-4 py-5 backdrop-blur lg:block">
-            <div className="mb-8 flex items-center gap-3 px-2">
-              <div className="grid h-11 w-11 place-items-center rounded-lg bg-nodo-violet shadow-glow">
-                <span className="text-lg font-black tracking-wide text-white">N</span>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">Nodo Tech & Growth</p>
-                <p className="text-xs text-slate-400">Finance Control Room</p>
-              </div>
-            </div>
-            <nav className="space-y-1">
-              {navItems.map(([label, path], index) => (
-                <a
-                  key={label}
-                  href={index === 8 ? "#social" : index === 7 ? "#marketing" : "#overview"}
-                  className={`flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition ${
-                    index === 0
-                      ? "bg-nodo-violet text-white shadow-glow"
-                      : "text-slate-300 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  <Icon path={path} className="h-5 w-5 shrink-0" />
-                  <span className="leading-tight">{label}</span>
-                </a>
-              ))}
-            </nav>
-            <div className="absolute bottom-5 left-4 right-4 rounded-lg border border-nodo-line bg-nodo-panel p-4">
-              <p className="text-xs uppercase tracking-[0.22em] text-nodo-neon">Reglas activas</p>
-              <p className="mt-2 text-sm leading-5 text-slate-300">
-                Inversión externa aislada de ventas. CAPEX financiado abre pasivo y no castiga OPEX.
-              </p>
-            </div>
-          </aside>
-        );
-      }
+      function App() {
+        const [activeTab, setActiveTab] = useState("overview");
 
-      function Header() {
-        return (
-          <header className="sticky top-0 z-10 border-b border-nodo-line bg-nodo-bg/88 px-4 py-4 backdrop-blur md:px-8">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.24em] text-nodo-neon">Resumen General</p>
-                <h1 className="mt-1 text-2xl font-semibold text-white md:text-3xl">Dashboard financiero ejecutivo</h1>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="rounded-lg border border-nodo-line bg-nodo-panel px-3 py-2 text-sm text-slate-300">Julio 2026</span>
-                <button className="rounded-lg bg-nodo-violet px-4 py-2 text-sm font-semibold text-white shadow-glow transition hover:bg-nodo-purple">
-                  Exportar reporte
-                </button>
-              </div>
-            </div>
-          </header>
-        );
-      }
-
-      function delta(current, previous) {
-        if (!previous) return 0;
-        return ((current - previous) / previous) * 100;
-      }
-
-      function MetricCard({ title, value, previous, tone = "purple", formula }) {
-        const change = delta(value, previous);
-        const positive = change >= 0;
-        const color = tone === "green" ? "text-nodo-green" : tone === "cyan" ? "text-nodo-cyan" : tone === "amber" ? "text-nodo-amber" : "text-nodo-neon";
-        return (
-          <article className="rounded-lg border border-nodo-line bg-nodo-panel p-5 shadow-soft">
-            <div className="flex items-start justify-between gap-4">
-              <p className="text-sm font-medium text-slate-300">{title}</p>
-              <span className={`rounded-md px-2 py-1 text-xs font-semibold ${positive ? "bg-emerald-400/10 text-nodo-green" : "bg-red-400/10 text-red-300"}`}>
-                {positive ? "↑" : "↓"} {Math.abs(change).toFixed(1)}%
-              </span>
-            </div>
-            <p className={`mt-4 text-2xl font-bold tracking-tight ${color}`}>{value < 1000 ? value.toFixed(1) : currency.format(value)}</p>
-            {formula && <p className="mt-3 text-xs leading-5 text-slate-500">{formula}</p>}
-          </article>
-        );
-      }
-
-      function Overview() {
-        const operatingProfit = seedMetrics.sales - seedMetrics.opex;
-        const previousOperatingProfit = seedMetrics.previousSales - seedMetrics.previousOpex;
-        const freeCashFlow = operatingProfit - seedMetrics.debtPayment;
-        const previousFreeCashFlow = previousOperatingProfit - seedMetrics.previousDebtPayment;
-        const runway = freeCashFlow < 0 ? seedMetrics.capitalFund / Math.abs(freeCashFlow) : 18.5;
-        const previousRunway = previousFreeCashFlow < 0 ? seedMetrics.previousCapitalFund / Math.abs(previousFreeCashFlow) : 15.2;
-
-        return (
-          <section id="overview" className="px-4 py-6 md:px-8">
-            <div className="grid metric-grid gap-4">
-              <MetricCard title="Ventas Totales" value={seedMetrics.sales} previous={seedMetrics.previousSales} tone="green" />
-              <MetricCard title="Gastos Operativos (OPEX)" value={seedMetrics.opex} previous={seedMetrics.previousOpex} tone="amber" />
-              <MetricCard title="Utilidad Operativa" value={operatingProfit} previous={previousOperatingProfit} tone="cyan" formula="Ventas Totales - Gastos Operativos" />
-              <MetricCard title="Pago de Deuda Mensual" value={seedMetrics.debtPayment} previous={seedMetrics.previousDebtPayment} />
-              <MetricCard title="Flujo de Caja Libre" value={freeCashFlow} previous={previousFreeCashFlow} tone="green" formula="Utilidad Operativa - Pago de Deuda Mensual" />
-              <MetricCard title="Total Activos Tecnológicos" value={seedMetrics.techAssets} previous={seedMetrics.previousTechAssets} tone="cyan" />
-              <MetricCard title="Saldo Pendiente de Deuda" value={seedMetrics.debtBalance} previous={seedMetrics.previousDebtBalance} tone="amber" />
-              <MetricCard title="Fondo de Capital Disponible" value={seedMetrics.capitalFund} previous={seedMetrics.previousCapitalFund} />
-              <MetricCard title="Start-up Runway" value={runway} previous={previousRunway} tone="green" formula="Si FCL es negativo: Fondo de Capital / quema mensual" />
-            </div>
-          </section>
-        );
-      }
-
-      function CampaignForm({ onAdd }) {
-        const [form, setForm] = useState({
-          name: "",
-          platform: "Meta Ads",
-          investment: "",
-          leads: "",
-          conversions: "",
-          revenue: ""
+        // --- CARGAR / GUARDAR ESTADO ---
+        const [db, setDb] = useState(() => {
+          const saved = localStorage.getItem("nodo_finance_db");
+          if (saved) {
+            try { return JSON.parse(saved); } catch (e) { }
+          }
+          return defaultSeed;
         });
 
-        function update(field, value) {
-          setForm((current) => ({ ...current, [field]: value }));
-        }
+        useEffect(() => {
+          localStorage.setItem("nodo_finance_db", JSON.stringify(db));
+        }, [db]);
 
-        function submit(event) {
-          event.preventDefault();
-          if (!form.name.trim()) return;
-          onAdd({
-            name: form.name.trim(),
-            platform: form.platform,
-            investment: Number(form.investment || 0),
-            leads: Number(form.leads || 0),
-            conversions: Number(form.conversions || 0),
-            revenue: Number(form.revenue || 0)
+        const resetToSeed = () => {
+          if (confirm("¿Estás seguro de que quieres restablecer los datos originales de la arquitectura?")) {
+            setDb(defaultSeed);
+            setActiveTab("overview");
+          }
+        };
+
+        // --- CÁLCULOS DE MÉTRICAS (REGLAS DE NEGOCIO) ---
+        const metrics = useMemo(() => {
+          // 1. Ventas Totales: SUM(invoices.amount WHERE status = 'paid')
+          const totalSales = db.invoices
+            .filter(inv => inv.status === "paid")
+            .reduce((sum, inv) => sum + inv.amount, 0);
+
+          // 2. Intereses amortizados en OPEX
+          const totalDebtInterest = db.payments.reduce((sum, pay) => sum + pay.interest, 0);
+
+          // 3. OPEX Operativo: SUM(opex) + SUM(debt_payments.interest)
+          const totalOpexExpenses = db.opex.reduce((sum, op) => sum + op.amount, 0);
+          const operatingOpex = totalOpexExpenses + totalDebtInterest;
+
+          // 4. Utilidad Operativa: totalSales - operatingOpex
+          const operatingProfit = totalSales - operatingOpex;
+
+          // 5. Pagos mensuales de deuda: SUM(payments.total)
+          const monthlyDebtPayment = db.payments.reduce((sum, pay) => sum + pay.total, 0);
+
+          // 6. Flujo de Caja Libre: Utilidad - Pago total de Deuda
+          const freeCashFlow = operatingProfit - monthlyDebtPayment;
+
+          // 7. Activos Tecnológicos: SUM(fixed_assets.value WHERE status = 'active')
+          const totalTechAssets = db.assets
+            .filter(as => as.status === "active")
+            .reduce((sum, as) => sum + as.value, 0);
+
+          // 8. Saldo Pendiente de Deuda: SUM(liabilities.outstanding)
+          const debtBalance = db.liabilities
+            .filter(li => li.status === "active")
+            .reduce((sum, li) => sum + li.outstanding, 0);
+
+          // 9. Capital Disponible: Inflows - Outflows
+          const capitalFundAvailable = db.capital.reduce((sum, cap) => {
+            if (cap.type === "withdrawal") return sum - cap.amount;
+            return sum + cap.amount;
+          }, 0);
+
+          // 10. Runway (meses): capitalFundAvailable / ABS(freeCashFlow) si FCL < 0
+          const runwayMonths = freeCashFlow < 0 ? (capitalFundAvailable / Math.abs(freeCashFlow)) : null;
+
+          return {
+            totalSales,
+            totalOpexExpenses,
+            totalDebtInterest,
+            operatingOpex,
+            operatingProfit,
+            monthlyDebtPayment,
+            freeCashFlow,
+            totalTechAssets,
+            debtBalance,
+            capitalFundAvailable,
+            runwayMonths
+          };
+        }, [db]);
+
+        // --- MANEJADORES DE BASE DE DATOS LOCAL ---
+        const addClient = (client) => {
+          setDb(prev => ({ ...prev, clients: [...prev.clients, { ...client, id: Date.now() }] }));
+        };
+
+        const addContract = (contract) => {
+          setDb(prev => ({ ...prev, contracts: [...prev.contracts, { ...contract, id: Date.now() }] }));
+        };
+
+        const addInvoice = (invoice) => {
+          setDb(prev => ({ ...prev, invoices: [...prev.invoices, { ...invoice, id: Date.now() }] }));
+        };
+
+        const markInvoicePaid = (invoiceId) => {
+          setDb(prev => ({
+            ...prev,
+            invoices: prev.invoices.map(inv => inv.id === invoiceId ? { ...inv, status: "paid", paidAt: new Date().toISOString().split('T')[0] } : inv)
+          }));
+        };
+
+        const deleteInvoice = (id) => {
+          setDb(prev => ({ ...prev, invoices: prev.invoices.filter(x => x.id !== id) }));
+        };
+
+        const addOpex = (expense) => {
+          setDb(prev => ({ ...prev, opex: [...prev.opex, { ...expense, id: Date.now() }] }));
+        };
+
+        const deleteOpex = (id) => {
+          setDb(prev => ({ ...prev, opex: prev.opex.filter(x => x.id !== id) }));
+        };
+
+        const addAsset = (asset) => {
+          const newAssetId = Date.now();
+          const newAsset = { ...asset, id: newAssetId, status: "active" };
+
+          setDb(prev => {
+            const updatedAssets = [...prev.assets, newAsset];
+            let updatedLiabilities = prev.liabilities;
+
+            // Regla Contable: Activo financiado crea automáticamente una obligación
+            if (asset.financed) {
+              const newLiability = {
+                id: Date.now() + 1,
+                assetId: newAssetId,
+                lender: `Financiamiento ${asset.name}`,
+                type: "vendor_financing",
+                principal: asset.value,
+                outstanding: asset.value,
+                rate: 15.0, // tasa sugerida
+                status: "active"
+              };
+              updatedLiabilities = [...prev.liabilities, newLiability];
+            }
+
+            return { ...prev, assets: updatedAssets, liabilities: updatedLiabilities };
           });
-          setForm({ name: "", platform: "Meta Ads", investment: "", leads: "", conversions: "", revenue: "" });
-        }
+        };
 
-        const fieldClass = "h-11 rounded-lg border border-nodo-line bg-[#0D1321] px-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-nodo-neon";
+        const deleteAsset = (id) => {
+          setDb(prev => ({
+            ...prev,
+            assets: prev.assets.filter(x => x.id !== id),
+            liabilities: prev.liabilities.filter(l => l.assetId !== id)
+          }));
+        };
+
+        const payLiability = (payment) => {
+          setDb(prev => {
+            // Registrar pago
+            const updatedPayments = [...prev.payments, { ...payment, id: Date.now() }];
+            
+            // Disminuir saldo pendiente en la tabla de deudas
+            const updatedLiabilities = prev.liabilities.map(li => {
+              if (li.id === payment.liabilityId) {
+                const newOutstanding = Math.max(0, li.outstanding - payment.principal);
+                return {
+                  ...li,
+                  outstanding: newOutstanding,
+                  status: newOutstanding <= 0 ? "paid" : "active"
+                };
+              }
+              return li;
+            });
+
+            return { ...prev, payments: updatedPayments, liabilities: updatedLiabilities };
+          });
+        };
+
+        const addCapital = (transaction) => {
+          setDb(prev => ({ ...prev, capital: [...prev.capital, { ...transaction, id: Date.now() }] }));
+        };
+
+        const deleteCapital = (id) => {
+          setDb(prev => ({ ...prev, capital: prev.capital.filter(x => x.id !== id) }));
+        };
+
+        const addCampaign = (campaign) => {
+          setDb(prev => ({ ...prev, campaigns: [...prev.campaigns, { ...campaign, id: Date.now() }] }));
+        };
+
+        const deleteCampaign = (id) => {
+          setDb(prev => ({ ...prev, campaigns: prev.campaigns.filter(x => x.id !== id) }));
+        };
+
+        const updateSocial = (id, fields) => {
+          setDb(prev => ({
+            ...prev,
+            social: prev.social.map(s => s.id === id ? { ...s, ...fields } : s)
+          }));
+        };
+
         return (
-          <form onSubmit={submit} className="grid gap-3 rounded-lg border border-nodo-line bg-nodo-panel p-4 md:grid-cols-6">
-            <input className={`${fieldClass} md:col-span-2`} placeholder="Nombre de la campaña" value={form.name} onChange={(e) => update("name", e.target.value)} />
-            <select className={fieldClass} value={form.platform} onChange={(e) => update("platform", e.target.value)}>
-              {["Meta Ads", "Google Ads", "LinkedIn", "TikTok", "Orgánico"].map((platform) => <option key={platform}>{platform}</option>)}
-            </select>
-            <input className={fieldClass} type="number" min="0" placeholder="Presupuesto $" value={form.investment} onChange={(e) => update("investment", e.target.value)} />
-            <input className={fieldClass} type="number" min="0" placeholder="Leads" value={form.leads} onChange={(e) => update("leads", e.target.value)} />
-            <input className={fieldClass} type="number" min="0" placeholder="Conversiones" value={form.conversions} onChange={(e) => update("conversions", e.target.value)} />
-            <input className={`${fieldClass} md:col-span-2`} type="number" min="0" placeholder="Facturación total $" value={form.revenue} onChange={(e) => update("revenue", e.target.value)} />
-            <button className="h-11 rounded-lg bg-nodo-violet px-4 text-sm font-semibold text-white shadow-glow transition hover:bg-nodo-purple md:col-span-4">
-              Registrar campaña y calcular ROI
-            </button>
-          </form>
-        );
-      }
-
-      function campaignStats(campaign) {
-        const cpl = campaign.leads ? campaign.investment / campaign.leads : 0;
-        const conversionRate = campaign.leads ? (campaign.conversions / campaign.leads) * 100 : 0;
-        const roas = campaign.investment ? campaign.revenue / campaign.investment : 0;
-        return { cpl, conversionRate, roas };
-      }
-
-      function MarketingTable({ campaigns }) {
-        return (
-          <div className="overflow-hidden rounded-lg border border-nodo-line bg-nodo-panel">
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-white/[0.03] text-xs uppercase tracking-[0.14em] text-slate-400">
-                  <tr>
-                    <th className="px-4 py-3">Campaña</th>
-                    <th className="px-4 py-3">Plataforma</th>
-                    <th className="px-4 py-3">Inversión</th>
-                    <th className="px-4 py-3">Leads</th>
-                    <th className="px-4 py-3">Clientes</th>
-                    <th className="px-4 py-3">CPL</th>
-                    <th className="px-4 py-3">Conv.</th>
-                    <th className="px-4 py-3">ROAS</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-nodo-line">
-                  {campaigns.map((campaign) => {
-                    const stats = campaignStats(campaign);
-                    const winner = stats.roas > 3;
-                    return (
-                      <tr key={`${campaign.name}-${campaign.platform}`} className={winner ? "bg-emerald-400/[0.06]" : ""}>
-                        <td className="px-4 py-4 font-medium text-white">{campaign.name}</td>
-                        <td className="px-4 py-4 text-slate-300">{campaign.platform}</td>
-                        <td className="px-4 py-4 text-slate-300">{currency.format(campaign.investment)}</td>
-                        <td className="px-4 py-4 text-slate-300">{campaign.leads}</td>
-                        <td className="px-4 py-4 text-slate-300">{campaign.conversions}</td>
-                        <td className="px-4 py-4 text-slate-300">{currency.format(stats.cpl)}</td>
-                        <td className="px-4 py-4 text-slate-300">{stats.conversionRate.toFixed(1)}%</td>
-                        <td className={`px-4 py-4 font-bold ${winner ? "text-nodo-green" : "text-nodo-neon"}`}>{stats.roas.toFixed(2)}x</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        );
-      }
-
-      function RoiChart({ campaigns }) {
-        const maxValue = Math.max(...campaigns.flatMap((campaign) => [campaign.investment, campaign.revenue]), 1);
-        return (
-          <div className="rounded-lg border border-nodo-line bg-nodo-panel p-5">
-            <div className="mb-5 flex items-center justify-between gap-4">
-              <h2 className="text-lg font-semibold text-white">Inversión vs Facturación</h2>
-              <div className="flex gap-4 text-xs text-slate-400">
-                <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-full bg-nodo-neon"></i>Inversión</span>
-                <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-full bg-nodo-green"></i>Facturación</span>
+          <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(124,58,237,0.18),transparent_34%),#0B0F19]">
+            {/* --- SIDEBAR --- */}
+            <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 border-r border-nodo-line bg-[#080C15]/95 px-4 py-5 backdrop-blur lg:block">
+              <div className="mb-6 flex items-center gap-3 px-2">
+                <div className="grid h-11 w-11 place-items-center rounded-lg bg-nodo-violet shadow-glow">
+                  <span className="text-lg font-black tracking-wide text-white">N</span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Nodo Tech & Growth</p>
+                  <p className="text-xs text-slate-400">Finance Control Room</p>
+                </div>
               </div>
-            </div>
-            <div className="space-y-4">
-              {campaigns.map((campaign) => (
-                <div key={`chart-${campaign.name}`} className="grid gap-2 md:grid-cols-[160px_1fr] md:items-center">
-                  <p className="truncate text-sm text-slate-300">{campaign.name}</p>
-                  <div className="space-y-2">
-                    <div className="h-3 rounded-full bg-white/[0.05]">
-                      <div className="h-3 rounded-full bg-nodo-neon" style={{ width: `${(campaign.investment / maxValue) * 100}%` }}></div>
-                    </div>
-                    <div className="h-3 rounded-full bg-white/[0.05]">
-                      <div className="h-3 rounded-full bg-nodo-green" style={{ width: `${(campaign.revenue / maxValue) * 100}%` }}></div>
-                    </div>
+              <nav className="space-y-1">
+                {navItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`flex w-full min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition text-left ${
+                      activeTab === item.id
+                        ? "bg-nodo-violet text-white shadow-glow"
+                        : "text-slate-300 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <Icon path={item.path} className="h-5 w-5 shrink-0" />
+                    <span className="leading-tight">{item.label}</span>
+                  </button>
+                ))}
+              </nav>
+              
+              <div className="absolute bottom-5 left-4 right-4 rounded-lg border border-nodo-line bg-nodo-panel p-4">
+                <p className="text-xs uppercase tracking-[0.22em] text-nodo-neon mb-1.5">Reglas de Negocio</p>
+                <div className="text-[11px] leading-4 text-slate-400 space-y-1.5">
+                  <p>🟢 Inyección de inversión excluida de Ventas.</p>
+                  <p>🟢 Activo financiado crea Deuda automáticamente.</p>
+                  <p>🟢 Pago de Deuda: Principal reduce saldo; solo el interés va a OPEX.</p>
+                </div>
+                <button
+                  onClick={resetToSeed}
+                  className="mt-4 w-full rounded border border-red-500/30 bg-red-950/20 py-1.5 text-xs font-semibold text-red-300 transition hover:bg-red-950/50"
+                >
+                  Restablecer Semilla
+                </button>
+              </div>
+            </aside>
+
+            {/* --- CUERPO PRINCIPAL --- */}
+            <main className="lg:pl-72">
+              <header className="sticky top-0 z-10 border-b border-nodo-line bg-[#0B0F19]/88 px-4 py-4 backdrop-blur md:px-8">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.24em] text-nodo-neon">Control Financiero</p>
+                    <h1 className="mt-1 text-2xl font-bold text-white md:text-3xl">
+                      {navItems.find(x => x.id === activeTab)?.label}
+                    </h1>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="rounded-lg border border-nodo-line bg-nodo-panel px-3 py-2 text-xs text-slate-300">
+                      Modo: Simulador Local
+                    </span>
+                    <button
+                      onClick={() => window.print()}
+                      className="rounded-lg bg-nodo-violet px-4 py-2 text-xs font-semibold text-white shadow-glow transition hover:bg-nodo-purple"
+                    >
+                      Exportar Reporte
+                    </button>
                   </div>
                 </div>
-              ))}
+              </header>
+
+              <div className="p-4 md:p-8">
+                {activeTab === "overview" && <TabOverview metrics={metrics} db={db} />}
+                {activeTab === "sales" && (
+                  <TabSales
+                    db={db}
+                    onAddClient={addClient}
+                    onAddContract={addContract}
+                    onAddInvoice={addInvoice}
+                    onMarkPaid={markInvoicePaid}
+                    onDeleteInvoice={deleteInvoice}
+                  />
+                )}
+                {activeTab === "opex" && (
+                  <TabOpex
+                    db={db}
+                    onAddOpex={addOpex}
+                    onDeleteOpex={deleteOpex}
+                    totalDebtInterest={metrics.totalDebtInterest}
+                  />
+                )}
+                {activeTab === "capex" && (
+                  <TabCapex
+                    db={db}
+                    onAddAsset={addAsset}
+                    onDeleteAsset={deleteAsset}
+                  />
+                )}
+                {activeTab === "debt" && (
+                  <TabDebt
+                    db={db}
+                    onPay={payLiability}
+                    metrics={metrics}
+                  />
+                )}
+                {activeTab === "cashflow" && <TabCashflow metrics={metrics} db={db} />}
+                {activeTab === "capital" && (
+                  <TabCapital
+                    db={db}
+                    onAddCapital={addCapital}
+                    onDeleteCapital={deleteCapital}
+                  />
+                )}
+                {activeTab === "marketing" && (
+                  <TabMarketing
+                    db={db}
+                    onAddCampaign={addCampaign}
+                    onDeleteCampaign={deleteCampaign}
+                  />
+                )}
+                {activeTab === "social" && (
+                  <TabSocial
+                    db={db}
+                    onUpdateSocial={updateSocial}
+                  />
+                )}
+              </div>
+            </main>
+          </div>
+        );
+      }
+
+      // ==========================================
+      // TAB: RESUMEN GENERAL (OVERVIEW)
+      // ==========================================
+      function TabOverview({ metrics, db }) {
+        return (
+          <div className="space-y-6">
+            <div className="grid metric-grid gap-4">
+              <Card title="Ventas Totales" value={metrics.totalSales} tone="green" subtext="Solo facturas en estado 'pagada'" />
+              <Card title="Gastos Operativos (OPEX)" value={metrics.operatingOpex} tone="amber" subtext={`Gastos directos + interés de deuda`} />
+              <Card title="Utilidad Operativa" value={metrics.operatingProfit} tone="cyan" subtext="Ventas - OPEX" formula="Ventas Totales - Gastos Operativos" />
+              <Card title="Pago de Deuda Mensual" value={metrics.monthlyDebtPayment} tone="purple" subtext="Componente principal + interés pagado" />
+              <Card title="Flujo de Caja Libre (FCL)" value={metrics.freeCashFlow} tone="green" subtext="Utilidad Operativa - Pagos Totales Deuda" formula="Utilidad - Pago de Deuda" />
+              <Card title="Total Activos Tecnológicos" value={metrics.totalTechAssets} tone="cyan" subtext="Activos fijos activos en balance" />
+              <Card title="Saldo Deuda Pendiente" value={metrics.debtBalance} tone="amber" subtext="Saldo de obligaciones en mora/activas" />
+              <Card title="Fondo Capital Disponible" value={metrics.capitalFundAvailable} tone="purple" subtext="Aportes e inversión disponible" />
+              <Card title="Start-up Runway" value={metrics.runwayMonths === null ? "Sin consumo" : `${metrics.runwayMonths.toFixed(1)} meses`} tone="green" subtext="Fondo Capital / Quema de FCL mensual" />
+            </div>
+
+            {/* Comparación Visual */}
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="rounded-lg border border-nodo-line bg-nodo-panel p-5">
+                <h3 className="text-lg font-semibold text-white mb-4">Relación Ingresos vs Gastos</h3>
+                <div className="space-y-4">
+                  <ProgressBar label="Ventas Totales" value={metrics.totalSales} max={Math.max(metrics.totalSales, metrics.operatingOpex, 1)} color="bg-nodo-green" />
+                  <ProgressBar label="OPEX Operativo" value={metrics.operatingOpex} max={Math.max(metrics.totalSales, metrics.operatingOpex, 1)} color="bg-nodo-amber" />
+                  <ProgressBar label="Servicio de Deuda" value={metrics.monthlyDebtPayment} max={Math.max(metrics.totalSales, metrics.operatingOpex, 1)} color="bg-nodo-purple" />
+                </div>
+              </div>
+              <div className="rounded-lg border border-nodo-line bg-nodo-panel p-5 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-2">Comportamiento del Flujo de Caja</h3>
+                  <p className="text-sm text-slate-400 leading-relaxed mb-4">
+                    La utilidad operativa genera caja. Sin embargo, el pago del principal de los préstamos reduce el Flujo de Caja Libre sin afectar al OPEX. Las inyecciones de socios e inversores financian la operación en caso de FCL negativo.
+                  </p>
+                </div>
+                <div className="border-t border-nodo-line pt-4 grid grid-cols-2 gap-4 text-center">
+                  <div>
+                    <p className="text-xs text-slate-500">Rentabilidad Operativa</p>
+                    <p className="text-lg font-bold text-nodo-cyan">
+                      {metrics.totalSales ? ((metrics.operatingProfit / metrics.totalSales) * 100).toFixed(1) : 0}%
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Estado de Caja</p>
+                    <p className={`text-lg font-bold ${metrics.freeCashFlow >= 0 ? "text-nodo-green" : "text-red-400"}`}>
+                      {metrics.freeCashFlow >= 0 ? "Excedente" : "Déficit (Quema)"}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         );
       }
 
-      function MarketingRoi() {
-        const [campaigns, setCampaigns] = useState(initialCampaigns);
-        const totals = useMemo(() => {
-          const investment = campaigns.reduce((sum, campaign) => sum + campaign.investment, 0);
-          const revenue = campaigns.reduce((sum, campaign) => sum + campaign.revenue, 0);
-          return { investment, revenue, roas: investment ? revenue / investment : 0 };
-        }, [campaigns]);
-
+      function Card({ title, value, tone, subtext, formula }) {
+        const isNum = typeof value === "number";
+        const color = tone === "green" ? "text-nodo-green" : tone === "cyan" ? "text-nodo-cyan" : tone === "amber" ? "text-nodo-amber" : "text-nodo-neon";
         return (
-          <section id="marketing" className="px-4 py-6 md:px-8">
-            <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.24em] text-nodo-neon">Marketing ROI</p>
-                <h2 className="mt-1 text-2xl font-semibold text-white">Pauta, leads y rentabilidad por campaña</h2>
+          <div className="rounded-lg border border-nodo-line bg-nodo-panel p-5 shadow-soft">
+            <p className="text-sm font-medium text-slate-400">{title}</p>
+            <p className={`mt-3 text-2xl font-bold tracking-tight ${color}`}>
+              {isNum ? currency.format(value) : value}
+            </p>
+            <p className="mt-2 text-xs text-slate-500 leading-tight">{subtext}</p>
+            {formula && (
+              <div className="mt-3 border-t border-nodo-line/50 pt-2">
+                <span className="text-[10px] uppercase font-semibold text-nodo-neon">Fórmula: {formula}</span>
               </div>
-              <div className="rounded-lg border border-nodo-line bg-nodo-panel px-4 py-3">
-                <p className="text-xs text-slate-500">ROAS consolidado</p>
-                <p className="text-xl font-bold text-nodo-green">{totals.roas.toFixed(2)}x</p>
-              </div>
-            </div>
-            <div className="grid gap-4">
-              <CampaignForm onAdd={(campaign) => setCampaigns((current) => [campaign, ...current])} />
-              <RoiChart campaigns={campaigns} />
-              <MarketingTable campaigns={campaigns} />
-            </div>
-          </section>
+            )}
+          </div>
         );
       }
 
-      function SocialSnapshot() {
-        const rows = [
-          ["LinkedIn", "+18.4%", "6.9%", "42 SQL atribuidos"],
-          ["Instagram", "+11.2%", "4.8%", "19 demos asistidas"],
-          ["TikTok", "+27.6%", "8.1%", "12 leads orgánicos"],
-          ["YouTube", "+9.7%", "5.3%", "7 oportunidades enterprise"]
-        ];
+      function ProgressBar({ label, value, max, color }) {
+        const pct = Math.min(100, (value / max) * 100);
         return (
-          <section id="social" className="px-4 pb-10 pt-6 md:px-8">
+          <div className="space-y-1">
+            <div className="flex justify-between text-xs">
+              <span className="text-slate-300">{label}</span>
+              <span className="font-semibold text-white">{currency.format(value)}</span>
+            </div>
+            <div className="h-3 rounded-full bg-white/[0.05]">
+              <div className={`h-3 rounded-full ${color}`} style={{ width: `${pct}%` }}></div>
+            </div>
+          </div>
+        );
+      }
+
+      // ==========================================
+      // TAB: VENTAS (INGRESOS)
+      // ==========================================
+      function TabSales({ db, onAddClient, onAddContract, onAddInvoice, onMarkPaid, onDeleteInvoice }) {
+        const [cName, setCName] = useState("");
+        const [cInd, setCInd] = useState("SaaS Enterprise");
+
+        const [conClient, setConClient] = useState("");
+        const [conName, setConName] = useState("");
+        const [conType, setConType] = useState("recurring");
+        const [conMrr, setConMrr] = useState("");
+        const [conTcv, setConTcv] = useState("");
+
+        const [invContract, setInvContract] = useState("");
+        const [invAmount, setInvAmount] = useState("");
+        const [invStatus, setInvStatus] = useState("paid");
+
+        const submitClient = (e) => {
+          e.preventDefault();
+          if (!cName) return;
+          onAddClient({ name: cName, industry: cInd });
+          setCName("");
+        };
+
+        const submitContract = (e) => {
+          e.preventDefault();
+          if (!conClient || !conName || !conTcv) return;
+          onAddContract({
+            clientId: Number(conClient),
+            name: conName,
+            type: conType,
+            mrr: conType === "recurring" ? Number(conMrr || 0) : 0,
+            tcv: Number(conTcv),
+            status: "active"
+          });
+          setConName("");
+          setConMrr("");
+          setConTcv("");
+        };
+
+        const submitInvoice = (e) => {
+          e.preventDefault();
+          if (!invContract || !invAmount) return;
+          onAddInvoice({
+            contractId: Number(invContract),
+            amount: Number(invAmount),
+            status: invStatus,
+            paidAt: invStatus === "paid" ? new Date().toISOString().split('T')[0] : ""
+          });
+          setInvAmount("");
+        };
+
+        return (
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* Formularios */}
+            <div className="space-y-6 lg:col-span-1">
+              {/* Cliente */}
+              <div className="rounded-lg border border-nodo-line bg-nodo-panel p-4">
+                <h3 className="text-md font-bold text-white mb-3">1. Registrar Cliente</h3>
+                <form onSubmit={submitClient} className="space-y-3">
+                  <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" placeholder="Nombre de la empresa" value={cName} onChange={e => setCName(e.target.value)} required />
+                  <select className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" value={cInd} onChange={e => setCInd(e.target.value)}>
+                    <option>SaaS Enterprise</option>
+                    <option>Growth Consulting</option>
+                    <option>AI Agency</option>
+                    <option>Other</option>
+                  </select>
+                  <button className="w-full h-10 rounded bg-nodo-violet text-xs font-semibold text-white shadow-glow hover:bg-nodo-purple">Agregar Cliente</button>
+                </form>
+              </div>
+
+              {/* Contrato */}
+              <div className="rounded-lg border border-nodo-line bg-nodo-panel p-4">
+                <h3 className="text-md font-bold text-white mb-3">2. Registrar Contrato Comercial</h3>
+                <form onSubmit={submitContract} className="space-y-3">
+                  <select className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" value={conClient} onChange={e => setConClient(e.target.value)} required>
+                    <option value="">Selecciona Cliente...</option>
+                    {db.clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" placeholder="Nombre del contrato" value={conName} onChange={e => setConName(e.target.value)} required />
+                  <select className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" value={conType} onChange={e => setConType(e.target.value)}>
+                    <option value="recurring">Recurrente (Suscripción/Fee)</option>
+                    <option value="one_time">Un solo pago (Proyecto/Servicio)</option>
+                  </select>
+                  {conType === "recurring" && (
+                    <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" type="number" placeholder="Monto Mensual (MRR) $" value={conMrr} onChange={e => setConMrr(e.target.value)} required />
+                  )}
+                  <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" type="number" placeholder="Valor Total de Contrato (TCV) $" value={conTcv} onChange={e => setConTcv(e.target.value)} required />
+                  <button className="w-full h-10 rounded bg-nodo-violet text-xs font-semibold text-white shadow-glow hover:bg-nodo-purple">Crear Contrato</button>
+                </form>
+              </div>
+
+              {/* Factura */}
+              <div className="rounded-lg border border-nodo-line bg-nodo-panel p-4">
+                <h3 className="text-md font-bold text-white mb-3">3. Emitir Factura</h3>
+                <form onSubmit={submitInvoice} className="space-y-3">
+                  <select className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" value={invContract} onChange={e => setInvContract(e.target.value)} required>
+                    <option value="">Selecciona Contrato...</option>
+                    {db.contracts.map(con => {
+                      const client = db.clients.find(c => c.id === con.clientId);
+                      return <option key={con.id} value={con.id}>{client?.name} - {con.name}</option>;
+                    })}
+                  </select>
+                  <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" type="number" placeholder="Monto de Factura $" value={invAmount} onChange={e => setInvAmount(e.target.value)} required />
+                  <select className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" value={invStatus} onChange={e => setInvStatus(e.target.value)}>
+                    <option value="paid">Pagada de inmediato</option>
+                    <option value="issued">Emitida / Por cobrar</option>
+                  </select>
+                  <button className="w-full h-10 rounded bg-nodo-violet text-xs font-semibold text-white shadow-glow hover:bg-nodo-purple">Crear Factura</button>
+                </form>
+              </div>
+            </div>
+
+            {/* Listados */}
+            <div className="space-y-6 lg:col-span-2">
+              <div className="rounded-lg border border-nodo-line bg-nodo-panel p-5">
+                <h3 className="text-lg font-semibold text-white mb-4">Registro de Facturación y Cobros</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead className="bg-white/[0.02] text-[10px] uppercase text-slate-400">
+                      <tr>
+                        <th className="p-3">Cliente / Contrato</th>
+                        <th className="p-3">Monto</th>
+                        <th className="p-3">Estado</th>
+                        <th className="p-3">Pago</th>
+                        <th className="p-3 text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-nodo-line">
+                      {db.invoices.map((inv) => {
+                        const contract = db.contracts.find(c => c.id === inv.contractId);
+                        const client = contract ? db.clients.find(cl => cl.id === contract.clientId) : null;
+                        return (
+                          <tr key={inv.id}>
+                            <td className="p-3">
+                              <p className="font-semibold text-white">{client?.name || "Desconocido"}</p>
+                              <p className="text-[10px] text-slate-500">{contract?.name || "Sin contrato"}</p>
+                            </td>
+                            <td className="p-3 font-medium text-white">{currency.format(inv.amount)}</td>
+                            <td className="p-3">
+                              <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                                inv.status === "paid" ? "bg-nodo-green/10 text-nodo-green" : "bg-nodo-amber/10 text-nodo-amber"
+                              }`}>
+                                {inv.status === "paid" ? "PAGADA" : "COBRAR"}
+                              </span>
+                            </td>
+                            <td className="p-3 text-[10px] text-slate-500">{inv.paidAt || "Pendiente"}</td>
+                            <td className="p-3 text-right space-x-2">
+                              {inv.status === "issued" && (
+                                <button
+                                  onClick={() => onMarkPaid(inv.id)}
+                                  className="rounded bg-nodo-green/20 px-2 py-1 text-[10px] font-semibold text-nodo-green hover:bg-nodo-green/30"
+                                >
+                                  Marcar Pago
+                                </button>
+                              )}
+                              <button
+                                onClick={() => onDeleteInvoice(inv.id)}
+                                className="text-red-400 hover:text-red-500 text-[10px]"
+                              >
+                                Eliminar
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // ==========================================
+      // TAB: OPEX (GASTOS OPERATIVOS)
+      // ==========================================
+      function TabOpex({ db, onAddOpex, onDeleteOpex, totalDebtInterest }) {
+        const [cat, setCat] = useState("Suscripciones IA");
+        const [vend, setVend] = useState("");
+        const [amt, setAmt] = useState("");
+        const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+
+        const submit = (e) => {
+          e.preventDefault();
+          if (!vend || !amt) return;
+          onAddOpex({
+            category: cat,
+            vendor: vend,
+            amount: Number(amt),
+            date
+          });
+          setVend("");
+          setAmt("");
+        };
+
+        const totalDirectOpex = db.opex.reduce((sum, o) => sum + o.amount, 0);
+
+        return (
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-1">
+              <div className="rounded-lg border border-nodo-line bg-nodo-panel p-4">
+                <h3 className="text-md font-bold text-white mb-3">Registrar Gasto OPEX</h3>
+                <form onSubmit={submit} className="space-y-3">
+                  <select className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" value={cat} onChange={e => setCat(e.target.value)}>
+                    <option>Suscripciones IA</option>
+                    <option>Cloud Hosting</option>
+                    <option>Marketing Pauta</option>
+                    <option>Nómina & Colaboradores</option>
+                    <option>Herramientas No-code</option>
+                    <option>Otros Gastos</option>
+                  </select>
+                  <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" placeholder="Proveedor / Proveedor" value={vend} onChange={e => setVend(e.target.value)} required />
+                  <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" type="number" placeholder="Monto $" value={amt} onChange={e => setAmt(e.target.value)} required />
+                  <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" type="date" value={date} onChange={e => setDate(e.target.value)} required />
+                  <button className="w-full h-10 rounded bg-nodo-violet text-xs font-semibold text-white shadow-glow hover:bg-nodo-purple">Guardar Gasto</button>
+                </form>
+              </div>
+
+              {/* Tarjeta Informativa sobre Regla de Interés */}
+              <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.03] p-4 text-xs space-y-2">
+                <p className="font-semibold text-nodo-amber">💡 Regla de Negocio: Intereses de Pasivos</p>
+                <p className="text-slate-400 leading-5">
+                  Los abonos de pasivos se dividen en Capital e Interés. Según las directrices, el capital amortiza deuda y no afecta los resultados operativos. El **Componente de Interés** es el único cargado como OPEX.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-6 lg:col-span-2">
+              <div className="rounded-lg border border-nodo-line bg-nodo-panel p-5">
+                <div className="flex justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white">Registro de Egresos Directos</h3>
+                  <div className="text-right">
+                    <p className="text-xs text-slate-500">Gastos Directos</p>
+                    <p className="text-sm font-bold text-white">{currency.format(totalDirectOpex)}</p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto mb-6">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead className="bg-white/[0.02] text-[10px] uppercase text-slate-400">
+                      <tr>
+                        <th className="p-3">Categoría</th>
+                        <th className="p-3">Proveedor</th>
+                        <th className="p-3">Fecha</th>
+                        <th className="p-3">Monto</th>
+                        <th className="p-3 text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-nodo-line">
+                      {db.opex.map((op) => (
+                        <tr key={op.id}>
+                          <td className="p-3 font-semibold text-white">{op.category}</td>
+                          <td className="p-3 text-slate-300">{op.vendor}</td>
+                          <td className="p-3 text-slate-500">{op.date}</td>
+                          <td className="p-3 font-medium text-white">{currency.format(op.amount)}</td>
+                          <td className="p-3 text-right">
+                            <button onClick={() => onDeleteOpex(op.id)} className="text-red-400 hover:text-red-500 text-[10px]">Eliminar</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Subtabla de intereses cargados desde deudas */}
+                <div className="border-t border-nodo-line pt-4">
+                  <h4 className="text-xs uppercase font-bold text-nodo-neon mb-3">Intereses Financieros Consolidados (Cargados en OPEX)</h4>
+                  <div className="rounded bg-[#0B0F19] p-3 flex justify-between items-center text-xs">
+                    <div>
+                      <p className="font-semibold text-white">Amortización de Deudas (Componente de Interés)</p>
+                      <p className="text-[10px] text-slate-500">Calculado a partir del historial de pagos</p>
+                    </div>
+                    <span className="font-bold text-nodo-amber">{currency.format(totalDebtInterest)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // ==========================================
+      // TAB: ACTIVOS FIJOS (CAPEX)
+      // ==========================================
+      function TabCapex({ db, onAddAsset, onDeleteAsset }) {
+        const [name, setName] = useState("");
+        const [type, setType] = useState("laptop");
+        const [value, setValue] = useState("");
+        const [financed, setFinanced] = useState(false);
+
+        const submit = (e) => {
+          e.preventDefault();
+          if (!name || !value) return;
+          onAddAsset({
+            name,
+            type,
+            value: Number(value),
+            financed
+          });
+          setName("");
+          setValue("");
+          setFinanced(false);
+        };
+
+        return (
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-1">
+              <div className="rounded-lg border border-nodo-line bg-nodo-panel p-4">
+                <h3 className="text-md font-bold text-white mb-3">Registrar Activo Fijo (CAPEX)</h3>
+                <form onSubmit={submit} className="space-y-3">
+                  <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" placeholder="Descripción del Activo" value={name} onChange={e => setName(e.target.value)} required />
+                  <select className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" value={type} onChange={e => setType(e.target.value)}>
+                    <option value="laptop">Laptops / Cómputo</option>
+                    <option value="screen">Pantallas / Monitores</option>
+                    <option value="audio">Equipos de Audio / Video</option>
+                    <option value="other">Infraestructura General</option>
+                  </select>
+                  <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" type="number" placeholder="Valor de Compra $" value={value} onChange={e => setValue(e.target.value)} required />
+                  <label className="flex items-center gap-2 text-xs text-slate-300 select-none py-1">
+                    <input type="checkbox" checked={financed} onChange={e => setFinanced(e.target.checked)} />
+                    ¿Es un activo financiado (Deuda)?
+                  </label>
+                  <button className="w-full h-10 rounded bg-nodo-violet text-xs font-semibold text-white shadow-glow hover:bg-nodo-purple">Registrar Activo</button>
+                </form>
+              </div>
+
+              <div className="rounded-lg border border-nodo-purple/20 bg-nodo-purple/[0.03] p-4 text-xs space-y-2">
+                <p className="font-semibold text-nodo-neon">⚠️ Integración de Finanzas de Activos</p>
+                <p className="text-slate-400 leading-5">
+                  Si marcas "Financiado", el sistema **creará de inmediato una obligación (Pasivo)** por el 100% de la adquisición del activo en el balance, simulando de manera integrada la contabilidad CAPEX financiada.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-6 lg:col-span-2">
+              <div className="rounded-lg border border-nodo-line bg-nodo-panel p-5">
+                <h3 className="text-lg font-semibold text-white mb-4">Registro de Activos en Balance</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead className="bg-white/[0.02] text-[10px] uppercase text-slate-400">
+                      <tr>
+                        <th className="p-3">Activo</th>
+                        <th className="p-3">Clasificación</th>
+                        <th className="p-3">Financiación</th>
+                        <th className="p-3">Valor de Compra</th>
+                        <th className="p-3 text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-nodo-line">
+                      {db.assets.map((as) => (
+                        <tr key={as.id}>
+                          <td className="p-3 font-semibold text-white">{as.name}</td>
+                          <td className="p-3 uppercase text-slate-400">{as.type}</td>
+                          <td className="p-3">
+                            <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold ${
+                              as.financed ? "bg-nodo-purple/10 text-nodo-neon" : "bg-nodo-cyan/10 text-nodo-cyan"
+                            }`}>
+                              {as.financed ? "DEUDA DIRECTA" : "EFECTIVO PROPIO"}
+                            </span>
+                          </td>
+                          <td className="p-3 font-medium text-white">{currency.format(as.value)}</td>
+                          <td className="p-3 text-right">
+                            <button onClick={() => onDeleteAsset(as.id)} className="text-red-400 hover:text-red-500 text-[10px]">Eliminar</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // ==========================================
+      // TAB: DEUDAS Y PASIVOS
+      // ==========================================
+      function TabDebt({ db, onPay, metrics }) {
+        const [debtId, setDebtId] = useState("");
+        const [totalPay, setTotalPay] = useState("");
+        const [interestPay, setInterestPay] = useState("");
+
+        const submit = (e) => {
+          e.preventDefault();
+          if (!debtId || !totalPay || !interestPay) return;
+          const total = Number(totalPay);
+          const interest = Number(interestPay);
+          const principal = total - interest;
+
+          if (principal < 0) {
+            alert("El componente de interés no puede ser mayor que el pago total.");
+            return;
+          }
+
+          onPay({
+            liabilityId: Number(debtId),
+            total,
+            principal,
+            interest,
+            date: new Date().toISOString().split('T')[0]
+          });
+
+          setTotalPay("");
+          setInterestPay("");
+        };
+
+        return (
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* Formulario de Amortización */}
+            <div className="space-y-6 lg:col-span-1">
+              <div className="rounded-lg border border-nodo-line bg-nodo-panel p-4">
+                <h3 className="text-md font-bold text-white mb-3">Registrar Pago a Deuda</h3>
+                <form onSubmit={submit} className="space-y-3">
+                  <select className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" value={debtId} onChange={e => setDebtId(e.target.value)} required>
+                    <option value="">Selecciona Deuda...</option>
+                    {db.liabilities.filter(l => l.status === "active").map(l => (
+                      <option key={l.id} value={l.id}>{l.lender} (Saldo: {currency.format(l.outstanding)})</option>
+                    ))}
+                  </select>
+                  <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" type="number" placeholder="Pago Total (Principal + Interés) $" value={totalPay} onChange={e => setTotalPay(e.target.value)} required />
+                  <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" type="number" placeholder="Componente de Interés $" value={interestPay} onChange={e => setInterestPay(e.target.value)} required />
+                  
+                  {totalPay && interestPay && (
+                    <div className="p-2.5 rounded bg-[#0B0F19] text-[10px] space-y-1">
+                      <p className="text-slate-500">Componente Principal (Reduce Deuda):</p>
+                      <p className="font-bold text-nodo-green">{currency.format(Number(totalPay) - Number(interestPay))}</p>
+                    </div>
+                  )}
+
+                  <button className="w-full h-10 rounded bg-nodo-violet text-xs font-semibold text-white shadow-glow hover:bg-nodo-purple">Procesar Amortización</button>
+                </form>
+              </div>
+
+              {/* Resumen Deuda */}
+              <div className="rounded-lg border border-nodo-line bg-nodo-panel p-4">
+                <h4 className="text-xs uppercase font-bold text-nodo-neon mb-3.5">Deuda Agregada</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between border-b border-nodo-line/40 pb-2">
+                    <span className="text-xs text-slate-400">Saldo por Pagar:</span>
+                    <span className="text-xs font-bold text-white">{currency.format(metrics.debtBalance)}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-nodo-line/40 pb-2">
+                    <span className="text-xs text-slate-400">Amortizado en total:</span>
+                    <span className="text-xs font-bold text-white">{currency.format(db.payments.reduce((sum, p) => sum + p.principal, 0))}</span>
+                  </div>
+                  <div className="flex justify-between pb-1">
+                    <span className="text-xs text-slate-400">Total intereses pagados:</span>
+                    <span className="text-xs font-bold text-nodo-amber">{currency.format(metrics.totalDebtInterest)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Listas */}
+            <div className="space-y-6 lg:col-span-2">
+              {/* Deudas Activas */}
+              <div className="rounded-lg border border-nodo-line bg-nodo-panel p-5">
+                <h3 className="text-lg font-semibold text-white mb-4">Obligaciones Financieras (Pasivos)</h3>
+                <div className="overflow-x-auto mb-6">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead className="bg-white/[0.02] text-[10px] uppercase text-slate-400">
+                      <tr>
+                        <th className="p-3">Entidad / Detalle</th>
+                        <th className="p-3">Tasa Anual</th>
+                        <th className="p-3">Desembolso</th>
+                        <th className="p-3">Saldo Pendiente</th>
+                        <th className="p-3 text-right">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-nodo-line">
+                      {db.liabilities.map((li) => (
+                        <tr key={li.id}>
+                          <td className="p-3">
+                            <p className="font-semibold text-white">{li.lender}</p>
+                            <p className="text-[10px] text-slate-500">Tipo: {li.type}</p>
+                          </td>
+                          <td className="p-3 text-slate-300">{li.rate}% E.A.</td>
+                          <td className="p-3 text-slate-400">{currency.format(li.principal)}</td>
+                          <td className="p-3 font-semibold text-white">{currency.format(li.outstanding)}</td>
+                          <td className="p-3 text-right">
+                            <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold ${
+                              li.status === "active" ? "bg-red-400/10 text-red-300" : "bg-nodo-green/10 text-nodo-green"
+                            }`}>
+                              {li.status === "active" ? "PENDIENTE" : "LIQUIDADO"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Historial de Pagos */}
+                <div className="border-t border-nodo-line pt-4">
+                  <h4 className="text-xs uppercase font-bold text-nodo-neon mb-3">Historial de Pagos Realizados</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs text-slate-400">
+                      <thead className="text-[10px] uppercase text-slate-500">
+                        <tr>
+                          <th className="p-2">Fecha</th>
+                          <th className="p-2">Préstamo</th>
+                          <th className="p-2">Pago Total</th>
+                          <th className="p-2 text-nodo-green">Amortización</th>
+                          <th className="p-2 text-nodo-amber">Intereses (OPEX)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-nodo-line/50">
+                        {db.payments.map((p) => {
+                          const liability = db.liabilities.find(l => l.id === p.liabilityId);
+                          return (
+                            <tr key={p.id}>
+                              <td className="p-2">{p.date}</td>
+                              <td className="p-2 text-white">{liability?.lender || "Desconocido"}</td>
+                              <td className="p-2 text-white">{currency.format(p.total)}</td>
+                              <td className="p-2 font-semibold text-nodo-green">{currency.format(p.principal)}</td>
+                              <td className="p-2 font-semibold text-nodo-amber">{currency.format(p.interest)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // ==========================================
+      // TAB: FLUJO DE CAJA (CASHFLOW)
+      // ==========================================
+      function TabCashflow({ metrics, db }) {
+        return (
+          <div className="space-y-6">
             <div className="rounded-lg border border-nodo-line bg-nodo-panel p-5">
-              <p className="text-xs uppercase tracking-[0.24em] text-nodo-neon">Redes Sociales</p>
-              <h2 className="mt-1 text-xl font-semibold text-white">Crecimiento orgánico y engagement</h2>
-              <div className="mt-5 grid gap-3 md:grid-cols-4">
-                {rows.map(([network, growth, engagement, note]) => (
-                  <div key={network} className="rounded-lg border border-nodo-line bg-nodo-panel2 p-4">
-                    <p className="font-semibold text-white">{network}</p>
-                    <p className="mt-3 text-2xl font-bold text-nodo-cyan">{growth}</p>
-                    <p className="text-sm text-slate-400">Engagement {engagement}</p>
-                    <p className="mt-3 text-xs text-slate-500">{note}</p>
+              <h3 className="text-lg font-semibold text-white mb-4">Conciliación de Flujos de Efectivo</h3>
+              <p className="text-sm text-slate-300 leading-relaxed mb-6">
+                El flujo de caja libre neto determina la salud del Runway de la compañía. Se construye sumando los cobros de facturación y restando los egresos operativos (OPEX) y los servicios de amortización de deudas de pasivos.
+              </p>
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-center bg-[#0B0F19] p-3.5 rounded border border-nodo-line">
+                  <div>
+                    <p className="text-xs text-slate-400">➕ Facturación Cobrada (Entradas Operativas)</p>
+                    <p className="text-[10px] text-slate-500">Invoices cobradas en el período</p>
+                  </div>
+                  <span className="text-sm font-bold text-nodo-green">{currency.format(metrics.totalSales)}</span>
+                </div>
+
+                <div className="flex justify-between items-center bg-[#0B0F19] p-3.5 rounded border border-nodo-line">
+                  <div>
+                    <p className="text-xs text-slate-400">➖ Gastos de Operación Directos (Salidas OPEX)</p>
+                    <p className="text-[10px] text-slate-500">Consumibles, hosting, nómina, etc.</p>
+                  </div>
+                  <span className="text-sm font-bold text-red-300">-{currency.format(metrics.totalOpexExpenses)}</span>
+                </div>
+
+                <div className="flex justify-between items-center bg-[#0B0F19] p-3.5 rounded border border-nodo-line">
+                  <div>
+                    <p className="text-xs text-slate-400">➖ Intereses Pagados por Financiamiento (OPEX Indirecto)</p>
+                    <p className="text-[10px] text-slate-500">Intereses de amortización de préstamos</p>
+                  </div>
+                  <span className="text-sm font-bold text-red-300">-{currency.format(metrics.totalDebtInterest)}</span>
+                </div>
+
+                <div className="flex justify-between items-center bg-[#0B0F19] p-3.5 rounded border border-nodo-line">
+                  <div>
+                    <p className="text-xs text-slate-400">➖ Pago de Principal de Préstamos (Amortización Pasivos)</p>
+                    <p className="text-[10px] text-slate-500">Amortizaciones directas que no van a OPEX</p>
+                  </div>
+                  <span className="text-sm font-bold text-red-300">-{currency.format(db.payments.reduce((sum, p) => sum + p.principal, 0))}</span>
+                </div>
+
+                <div className="flex justify-between items-center bg-nodo-violet/10 p-4 rounded border border-nodo-violet/30">
+                  <div>
+                    <p className="text-xs font-bold text-white">🟰 Flujo de Caja Libre Neto (Free Cash Flow)</p>
+                    <p className="text-[10px] text-slate-400">Caja neta remanente al final del período</p>
+                  </div>
+                  <span className={`text-base font-black ${metrics.freeCashFlow >= 0 ? "text-nodo-green" : "text-red-400"}`}>
+                    {currency.format(metrics.freeCashFlow)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // ==========================================
+      // TAB: CAPITAL E INVERSORES
+      // ==========================================
+      function TabCapital({ db, onAddCapital, onDeleteCapital }) {
+        const [inv, setInv] = useState("");
+        const [type, setType] = useState("founder_contribution");
+        const [amt, setAmt] = useState("");
+
+        const submit = (e) => {
+          e.preventDefault();
+          if (!inv || !amt) return;
+          onAddCapital({
+            investor: inv,
+            type,
+            amount: Number(amt),
+            date: new Date().toISOString().split('T')[0]
+          });
+          setInv("");
+          setAmt("");
+        };
+
+        const totalCapital = db.capital.reduce((sum, cap) => {
+          if (cap.type === "withdrawal") return sum - cap.amount;
+          return sum + cap.amount;
+        }, 0);
+
+        return (
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-1">
+              <div className="rounded-lg border border-nodo-line bg-nodo-panel p-4">
+                <h3 className="text-md font-bold text-white mb-3">Registrar Transacción de Capital</h3>
+                <form onSubmit={submit} className="space-y-3">
+                  <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" placeholder="Nombre Socio / Inversor" value={inv} onChange={e => setInv(e.target.value)} required />
+                  <select className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" value={type} onChange={e => setType(e.target.value)}>
+                    <option value="founder_contribution">Aporte de Fundador</option>
+                    <option value="angel_round">Ronda Ángel</option>
+                    <option value="venture_capital">Venture Capital (VC)</option>
+                    <option value="withdrawal">Retiro de Capital / Distribución</option>
+                  </select>
+                  <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" type="number" placeholder="Monto $" value={amt} onChange={e => setAmt(e.target.value)} required />
+                  <button className="w-full h-10 rounded bg-nodo-violet text-xs font-semibold text-white shadow-glow hover:bg-nodo-purple">Procesar Movimiento</button>
+                </form>
+              </div>
+
+              {/* Tarjeta de Alerta de Aislamiento de Regla */}
+              <div className="rounded-lg border border-nodo-green/20 bg-nodo-green/[0.03] p-4 text-xs space-y-2">
+                <p className="font-semibold text-nodo-green">💡 Regla Contable: Aislamiento de Capital</p>
+                <p className="text-slate-400 leading-5">
+                  El capital de inversión externa o de fundadores jamás debe contabilizarse como ventas del período para no distorsionar las métricas de ingresos operativos. Este módulo los administra de forma completamente aislada de la facturación.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-6 lg:col-span-2">
+              <div className="rounded-lg border border-nodo-line bg-nodo-panel p-5">
+                <div className="flex justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white">Historial de Transacciones de Fondo</h3>
+                  <div className="text-right">
+                    <p className="text-xs text-slate-500">Fondo Total Acumulado</p>
+                    <p className="text-sm font-bold text-nodo-green">{currency.format(totalCapital)}</p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead className="bg-white/[0.02] text-[10px] uppercase text-slate-400">
+                      <tr>
+                        <th className="p-3">Inversor / Socio</th>
+                        <th className="p-3">Tipo Transacción</th>
+                        <th className="p-3">Fecha</th>
+                        <th className="p-3">Monto</th>
+                        <th className="p-3 text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-nodo-line">
+                      {db.capital.map((cap) => (
+                        <tr key={cap.id}>
+                          <td className="p-3 font-semibold text-white">{cap.investor}</td>
+                          <td className="p-3">
+                            <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold ${
+                              cap.type === "withdrawal" ? "bg-red-400/10 text-red-300" : "bg-nodo-green/10 text-nodo-green"
+                            }`}>
+                              {cap.type.replace("_", " ").toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="p-3 text-slate-500">{cap.date}</td>
+                          <td className="p-3 font-medium text-white">{currency.format(cap.amount)}</td>
+                          <td className="p-3 text-right">
+                            <button onClick={() => onDeleteCapital(cap.id)} className="text-red-400 hover:text-red-500 text-[10px]">Eliminar</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // ==========================================
+      // TAB: MARKETING ROI (PAUTA)
+      // ==========================================
+      function TabMarketing({ db, onAddCampaign, onDeleteCampaign }) {
+        const [name, setName] = useState("");
+        const [platform, setPlatform] = useState("Meta Ads");
+        const [investment, setInvestment] = useState("");
+        const [leads, setLeads] = useState("");
+        const [conversions, setConversions] = useState("");
+        const [revenue, setRevenue] = useState("");
+
+        const submit = (e) => {
+          e.preventDefault();
+          if (!name || !investment) return;
+          onAddCampaign({
+            name,
+            platform,
+            investment: Number(investment),
+            leads: Number(leads || 0),
+            conversions: Number(conversions || 0),
+            revenue: Number(revenue || 0)
+          });
+          setName("");
+          setInvestment("");
+          setLeads("");
+          setConversions("");
+          setRevenue("");
+        };
+
+        const totals = useMemo(() => {
+          const totalInv = db.campaigns.reduce((sum, c) => sum + c.investment, 0);
+          const totalRev = db.campaigns.reduce((sum, c) => sum + c.revenue, 0);
+          const roas = totalInv ? totalRev / totalInv : 0;
+          return { investment: totalInv, revenue: totalRev, roas };
+        }, [db.campaigns]);
+
+        const maxChartValue = Math.max(...db.campaigns.flatMap(c => [c.investment, c.revenue]), 1);
+
+        return (
+          <div className="space-y-6">
+            <div className="rounded-lg border border-nodo-line bg-nodo-panel p-4">
+              <h3 className="text-md font-bold text-white mb-3">Registrar Nueva Campaña</h3>
+              <form onSubmit={submit} className="grid gap-3 md:grid-cols-6 items-end">
+                <div className="md:col-span-2 space-y-1">
+                  <span className="text-[10px] text-slate-500">Nombre de Campaña</span>
+                  <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" placeholder="Campaña..." value={name} onChange={e => setName(e.target.value)} required />
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] text-slate-500">Canal</span>
+                  <select className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" value={platform} onChange={e => setPlatform(e.target.value)}>
+                    <option>Meta Ads</option>
+                    <option>Google Ads</option>
+                    <option>LinkedIn</option>
+                    <option>TikTok</option>
+                    <option>Orgánico</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] text-slate-500">Presupuesto $</span>
+                  <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" type="number" placeholder="Inversión" value={investment} onChange={e => setInvestment(e.target.value)} required />
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] text-slate-500">Leads</span>
+                  <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" type="number" placeholder="Clientes Potenciales" value={leads} onChange={e => setLeads(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] text-slate-500">Conversiones</span>
+                  <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" type="number" placeholder="Clientes Cerrados" value={conversions} onChange={e => setConversions(e.target.value)} />
+                </div>
+                <div className="md:col-span-2 space-y-1">
+                  <span className="text-[10px] text-slate-500">Facturación Atribuida $</span>
+                  <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" type="number" placeholder="Ventas Atribuidas" value={revenue} onChange={e => setRevenue(e.target.value)} />
+                </div>
+                <button className="md:col-span-4 h-10 rounded bg-nodo-violet text-xs font-semibold text-white shadow-glow hover:bg-nodo-purple">Agregar Campaña y Calcular ROI</button>
+              </form>
+            </div>
+
+            {/* Gráfico de barras */}
+            <div className="rounded-lg border border-nodo-line bg-nodo-panel p-5">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-md font-semibold text-white">Inversión vs Facturación</h3>
+                <div className="flex gap-4 text-xs text-slate-400">
+                  <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-full bg-nodo-neon"></i>Inversión</span>
+                  <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-full bg-nodo-green"></i>Facturación</span>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {db.campaigns.map((camp) => (
+                  <div key={camp.id} className="grid gap-2 md:grid-cols-[160px_1fr] md:items-center">
+                    <p className="truncate text-xs text-slate-300 font-semibold">{camp.name}</p>
+                    <div className="space-y-1">
+                      <div className="h-2.5 rounded-full bg-white/[0.05]">
+                        <div className="h-2.5 rounded-full bg-nodo-neon" style={{ width: `${(camp.investment / maxChartValue) * 100}%` }}></div>
+                      </div>
+                      <div className="h-2.5 rounded-full bg-white/[0.05]">
+                        <div className="h-2.5 rounded-full bg-nodo-green" style={{ width: `${(camp.revenue / maxChartValue) * 100}%` }}></div>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
-          </section>
+
+            {/* Tabla */}
+            <div className="rounded-lg border border-nodo-line bg-nodo-panel p-5">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-md font-semibold text-white">Métricas de Campaña</h3>
+                <div className="text-xs bg-nodo-green/10 text-nodo-green rounded px-2.5 py-1 font-bold">
+                  ROAS Consolidado: {totals.roas.toFixed(2)}x
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-white/[0.02] text-[10px] uppercase text-slate-400">
+                    <tr>
+                      <th className="p-3">Campaña</th>
+                      <th className="p-3">Canal</th>
+                      <th className="p-3">Inversión</th>
+                      <th className="p-3">Leads</th>
+                      <th className="p-3">Conv.</th>
+                      <th className="p-3">CPL</th>
+                      <th className="p-3">Tasa Conv.</th>
+                      <th className="p-3 text-right">ROAS</th>
+                      <th className="p-3 text-right">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-nodo-line">
+                    {db.campaigns.map((camp) => {
+                      const cpl = camp.leads ? camp.investment / camp.leads : 0;
+                      const convRate = camp.leads ? (camp.conversions / camp.leads) * 100 : 0;
+                      const roas = camp.investment ? camp.revenue / camp.investment : 0;
+                      const winner = roas > 3.0;
+                      return (
+                        <tr key={camp.id} className={winner ? "bg-nodo-green/[0.06]" : ""}>
+                          <td className="p-3 font-semibold text-white">{camp.name}</td>
+                          <td className="p-3 text-slate-300">{camp.platform}</td>
+                          <td className="p-3 text-slate-300">{currency.format(camp.investment)}</td>
+                          <td className="p-3 text-slate-400">{camp.leads}</td>
+                          <td className="p-3 text-slate-400">{camp.conversions}</td>
+                          <td className="p-3 text-slate-400">{currency.format(cpl)}</td>
+                          <td className="p-3 text-slate-400">{convRate.toFixed(1)}%</td>
+                          <td className={`p-3 text-right font-bold ${winner ? "text-nodo-green" : "text-nodo-neon"}`}>{roas.toFixed(2)}x</td>
+                          <td className="p-3 text-right">
+                            <button onClick={() => onDeleteCampaign(camp.id)} className="text-red-400 hover:text-red-500 text-[10px]">Eliminar</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         );
       }
 
-      function App() {
+      // ==========================================
+      // TAB: REDES SOCIALES
+      // ==========================================
+      function TabSocial({ db, onUpdateSocial }) {
         return (
-          <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(124,58,237,0.22),transparent_34%),#0B0F19]">
-            <Sidebar />
-            <main className="lg:pl-72">
-              <Header />
-              <div className="scrollbar-thin">
-                <Overview />
-                <MarketingRoi />
-                <SocialSnapshot />
+          <div className="space-y-6">
+            <div className="rounded-lg border border-nodo-line bg-nodo-panel p-5">
+              <h3 className="text-lg font-semibold text-white mb-4">Crecimiento Orgánico en Redes Sociales</h3>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {db.social.map((soc) => {
+                  const growthPct = soc.start ? ((soc.end - soc.start) / soc.start) * 100 : 0;
+                  return (
+                    <div key={soc.id} className="rounded-lg border border-nodo-line bg-nodo-panel2 p-4 space-y-4">
+                      <div className="flex justify-between items-center">
+                        <p className="font-bold text-white text-base">{soc.network}</p>
+                        <span className={`text-xs font-bold ${growthPct >= 0 ? "text-nodo-green" : "text-red-400"}`}>
+                          {growthPct >= 0 ? "↑" : "↓"} {Math.abs(growthPct).toFixed(1)}%
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs text-slate-400">
+                          <span>Seguidores Iniciales:</span>
+                          <span className="text-white">{soc.start}</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-slate-400">
+                          <span>Seguidores Actuales:</span>
+                          <span className="text-white">{soc.end}</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-slate-400">
+                          <span>Engagement Rate:</span>
+                          <span className="text-nodo-cyan font-semibold">{soc.engagement}%</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-slate-400">
+                          <span>SQL Atribuidos:</span>
+                          <span className="text-nodo-neon font-bold">{soc.leads} leads</span>
+                        </div>
+                      </div>
+
+                      {/* Mini Formulario inline para actualizar */}
+                      <div className="pt-3 border-t border-nodo-line flex gap-2">
+                        <input
+                          className="w-1/2 h-8 rounded bg-[#0B0F19] border border-nodo-line px-2 text-[10px] text-white"
+                          type="number"
+                          placeholder="Nuevos Seg."
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              onUpdateSocial(soc.id, { end: Number(e.target.value) });
+                            }
+                          }}
+                        />
+                        <input
+                          className="w-1/2 h-8 rounded bg-[#0B0F19] border border-nodo-line px-2 text-[10px] text-white"
+                          type="number"
+                          placeholder="Engagement %"
+                          step="0.1"
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              onUpdateSocial(soc.id, { engagement: Number(e.target.value) });
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </main>
+            </div>
           </div>
         );
       }
