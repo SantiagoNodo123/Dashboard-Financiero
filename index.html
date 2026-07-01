@@ -83,6 +83,7 @@
       const navItems = [
         { id: "overview", label: "Resumen General", path: "M3 4h18v2H3v2h18Zm-6 5H3v2h12V9Zm6 5H3v2h18v-2Z" },
         { id: "sales", label: "Ventas (Ingresos)", path: "M4 19V5h2v14H4Zm5 0V9h2v10H9Zm5 0V3h2v16h-2Zm5 0v-7h2v7h-2Z" },
+        { id: "cxc", label: "Cuentas por Cobrar (CxC)", path: "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Zm-2 10H7v-2h10v2Zm0-4H7V7h10v2Z" },
         { id: "opex", label: "Operación (OPEX)", path: "M12 2 2 7l10 5 10-5-10-5Zm0 12L2 9v8l10 5 10-5V9l-10 5Z" },
         { id: "capex", label: "Activos Fijos (CAPEX)", path: "M4 5h16v10H4V5Zm2 2v6h12V7H6Zm4 10h4l1 2H9l1-2Z" },
         { id: "debt", label: "Deudas y Pasivos", path: "M6 3h12v18H6V3Zm2 4h8V5H8v2Zm0 4h8V9H8v2Zm0 4h5v-2H8v2Zm8 4h-3v-2h3v2Z" },
@@ -146,6 +147,10 @@
           // 6. Flujo de Caja Libre: Utilidad - Pago total de Deuda
           const freeCashFlow = operatingProfit - monthlyDebtPayment;
 
+          // Cuentas por Cobrar (CxC)
+          const totalContractValue = db.contracts.reduce((sum, con) => sum + con.tcv, 0);
+          const totalCxC = Math.max(0, totalContractValue - totalSales);
+
           // 7. Activos Tecnológicos: SUM(fixed_assets.value WHERE status = 'active')
           const totalTechAssets = db.assets
             .filter(as => as.status === "active")
@@ -176,7 +181,9 @@
             totalTechAssets,
             debtBalance,
             capitalFundAvailable,
-            runwayMonths
+            runwayMonths,
+            totalContractValue,
+            totalCxC
           };
         }, [db]);
 
@@ -377,6 +384,12 @@
                     onDeleteInvoice={deleteInvoice}
                   />
                 )}
+                {activeTab === "cxc" && (
+                  <TabCxC
+                    db={db}
+                    metrics={metrics}
+                  />
+                )}
                 {activeTab === "opex" && (
                   <TabOpex
                     db={db}
@@ -434,6 +447,7 @@
           <div className="space-y-6">
             <div className="grid metric-grid gap-4">
               <Card title="Ventas Totales" value={metrics.totalSales} tone="green" subtext="Solo facturas en estado 'pagada'" />
+              <Card title="Cuentas por Cobrar Totales" value={metrics.totalCxC} tone="cyan" subtext="Venta firmada - Efectivo cobrado" formula="Total Contratado - Cobrado Real" />
               <Card title="Gastos Operativos (OPEX)" value={metrics.operatingOpex} tone="amber" subtext={`Gastos directos + interés de deuda`} />
               <Card title="Utilidad Operativa" value={metrics.operatingProfit} tone="cyan" subtext="Ventas - OPEX" formula="Ventas Totales - Gastos Operativos" />
               <Card title="Pago de Deuda Mensual" value={metrics.monthlyDebtPayment} tone="purple" subtext="Componente principal + interés pagado" />
@@ -527,6 +541,7 @@
         const [conType, setConType] = useState("recurring");
         const [conMrr, setConMrr] = useState("");
         const [conTcv, setConTcv] = useState("");
+        const [conDate, setConDate] = useState(new Date().toISOString().split('T')[0]);
 
         const [invContract, setInvContract] = useState("");
         const [invAmount, setInvAmount] = useState("");
@@ -549,7 +564,8 @@
             type: conType,
             mrr: conType === "recurring" ? Number(conMrr || 0) : 0,
             tcv: Number(conTcv),
-            status: "active"
+            status: "active",
+            date: conDate
           });
           setConName("");
           setConMrr("");
@@ -597,6 +613,10 @@
                     {db.clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                   <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" placeholder="Nombre del contrato" value={conName} onChange={e => setConName(e.target.value)} required />
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-500">Fecha de Cierre del Contrato</span>
+                    <input className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" type="date" value={conDate} onChange={e => setConDate(e.target.value)} required />
+                  </div>
                   <select className="w-full h-10 rounded bg-[#0D1321] border border-nodo-line px-3 text-xs text-white outline-none" value={conType} onChange={e => setConType(e.target.value)}>
                     <option value="recurring">Recurrente (Suscripción/Fee)</option>
                     <option value="one_time">Un solo pago (Proyecto/Servicio)</option>
@@ -689,6 +709,136 @@
                       })}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // ==========================================
+      // TAB: CUENTAS POR COBRAR (CxC)
+      // ==========================================
+      function TabCxC({ db, metrics }) {
+        const clientBalances = useMemo(() => {
+          return db.clients.map(client => {
+            const clientContracts = db.contracts.filter(c => c.clientId === client.id);
+            const contractValue = clientContracts.reduce((sum, c) => sum + c.tcv, 0);
+
+            const collected = db.invoices
+              .filter(inv => inv.status === "paid" && clientContracts.some(c => c.id === inv.contractId))
+              .reduce((sum, inv) => sum + inv.amount, 0);
+
+            const balance = Math.max(0, contractValue - collected);
+
+            return {
+              ...client,
+              contractValue,
+              collected,
+              balance
+            };
+          }).filter(c => c.balance > 0);
+        }, [db]);
+
+        const projection = useMemo(() => {
+          const today = new Date("2026-07-01");
+          let next30 = 0;
+          let next60 = 0;
+
+          db.invoices.forEach(inv => {
+            if (inv.status === "issued") {
+              const dueDate = new Date(inv.paidAt || inv.issuedAt);
+              const diffTime = dueDate.getTime() - today.getTime();
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+              if (diffDays >= 0 && diffDays <= 30) {
+                next30 += inv.amount;
+              } else if (diffDays > 30 && diffDays <= 60) {
+                next60 += inv.amount;
+              }
+            }
+          });
+          return { next30, next60 };
+        }, [db.invoices]);
+
+        return (
+          <div className="space-y-6">
+            <div className="grid metric-grid gap-4">
+              <Card title="Cuentas por Cobrar Totales" value={metrics.totalCxC} tone="cyan" subtext="Suma de contratos - Efectivo recaudado" formula="Total Contratado - Cobrado Real" />
+              <Card title="Proyección Próximos 30 Días" value={projection.next30} tone="green" subtext="Facturas emitidas por cobrar (0 - 30 días)" />
+              <Card title="Proyección Próximos 60 Días" value={projection.next60} tone="amber" subtext="Facturas emitidas por cobrar (31 - 60 días)" />
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-3">
+              {/* Tabla de saldos por cliente */}
+              <div className="lg:col-span-2 rounded-lg border border-nodo-line bg-nodo-panel p-5">
+                <h3 className="text-lg font-semibold text-white mb-4">Listado de Clientes con Saldos Pendientes</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead className="bg-white/[0.02] text-[10px] uppercase text-slate-400">
+                      <tr>
+                        <th className="p-3">Cliente</th>
+                        <th className="p-3">Giro de Negocio</th>
+                        <th className="p-3">Valor Contrato</th>
+                        <th className="p-3">Recaudado</th>
+                        <th className="p-3 text-right">Saldo CxC</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-nodo-line">
+                      {clientBalances.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="p-4 text-center text-slate-500">No hay clientes con saldos pendientes.</td>
+                        </tr>
+                      ) : (
+                        clientBalances.map((cb) => (
+                          <tr key={cb.id}>
+                            <td className="p-3 font-semibold text-white">{cb.name}</td>
+                            <td className="p-3 text-slate-400">{cb.industry}</td>
+                            <td className="p-3 text-slate-300">{currency.format(cb.contractValue)}</td>
+                            <td className="p-3 text-nodo-green">{currency.format(cb.collected)}</td>
+                            <td className="p-3 text-right font-bold text-nodo-cyan">{currency.format(cb.balance)}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Proyección de Liquidez Visual */}
+              <div className="lg:col-span-1 rounded-lg border border-nodo-line bg-nodo-panel p-5 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Proyección de Liquidez</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed mb-6">
+                    Muestra el flujo de caja esperado basado en la fecha de vencimiento/cobro de las facturas pendientes de cobro (estado 'issued').
+                  </p>
+
+                  <div className="space-y-6">
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-slate-300">Próximos 30 días</span>
+                        <span className="font-bold text-nodo-green">{currency.format(projection.next30)}</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-white/[0.05]">
+                        <div className="h-2 rounded-full bg-nodo-green" style={{ width: `${Math.min(100, (projection.next30 / Math.max(projection.next30 + projection.next60, 1)) * 100)}%` }}></div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-slate-300">Próximos 60 días (Día 31 al 60)</span>
+                        <span className="font-bold text-nodo-amber">{currency.format(projection.next60)}</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-white/[0.05]">
+                        <div className="h-2 rounded-full bg-nodo-amber" style={{ width: `${Math.min(100, (projection.next60 / Math.max(projection.next30 + projection.next60, 1)) * 100)}%` }}></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-nodo-line mt-6 pt-4 text-center">
+                  <span className="text-[10px] text-slate-500 block uppercase mb-1">Total Esperado (60 días)</span>
+                  <span className="text-xl font-bold text-white">{currency.format(projection.next30 + projection.next60)}</span>
                 </div>
               </div>
             </div>

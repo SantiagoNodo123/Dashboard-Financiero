@@ -243,3 +243,18 @@ FROM marketing_campaigns;
 --    Only liability_payments.interest_component is included in operating OPEX.
 -- 2. Capital injections live in capital_fund_transactions and never join sales_contracts
 --    or invoices, preserving true operating revenue metrics.
+-- 3. Accounts Receivable (Cuentas por Cobrar - CxC) calculation:
+--    Outstanding balance = Total Contract Value - Collected Revenue (paid invoices).
+CREATE VIEW accounts_receivable_summary AS
+SELECT
+  sc.id AS contract_id,
+  sc.contract_name,
+  sc.client_id,
+  c.name AS client_name,
+  sc.total_contract_value,
+  COALESCE(SUM(CASE WHEN i.status = 'paid' THEN i.amount ELSE 0 END), 0) AS total_collected,
+  sc.total_contract_value - COALESCE(SUM(CASE WHEN i.status = 'paid' THEN i.amount ELSE 0 END), 0) AS accounts_receivable_balance
+FROM sales_contracts sc
+JOIN clients c ON sc.client_id = c.id
+LEFT JOIN invoices i ON i.sales_contract_id = sc.id
+GROUP BY sc.id, sc.contract_name, sc.client_id, c.name, sc.total_contract_value;
