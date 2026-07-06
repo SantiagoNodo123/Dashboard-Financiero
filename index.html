@@ -93,6 +93,33 @@
         { id: "social", label: "Redes Sociales", path: "M7 8a4 4 0 1 1 7.5 1.9l4.1 2.4A4 4 0 1 1 17 15.9l-4.1-2.4A4 4 0 1 1 7 8Z" }
       ];
 
+      // Encuentra el lunes correspondiente a una fecha YYYY-MM-DD
+      function getMondayDateStr(dateStr) {
+        if (!dateStr) return "";
+        const parts = dateStr.split("-");
+        const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // lunes
+        const monday = new Date(d.setDate(diff));
+        
+        const yyyy = monday.getFullYear();
+        const mm = String(monday.getMonth() + 1).padStart(2, '0');
+        const dd = String(monday.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+      }
+
+      // Obtiene el nombre legible de un mes a partir de YYYY-MM
+      function getMonthLabel(yearMonthStr) {
+        if (!yearMonthStr) return "";
+        const parts = yearMonthStr.split("-");
+        const monthNames = [
+          "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+          "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+        ];
+        const monthIdx = Number(parts[1]) - 1;
+        return `${monthNames[monthIdx]} ${parts[0]}`;
+      }
+
       function Icon({ path, className = "h-5 w-5" }) {
         return (
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
@@ -186,6 +213,81 @@
             totalCxC
           };
         }, [db]);
+
+        // --- CÁLCULO DE CRECIMIENTO MENSUAL Y SEMANAL ---
+        const growthMetrics = useMemo(() => {
+          // Obtener facturas pagadas ordenadas
+          const paidInvoices = db.invoices
+            .filter(inv => inv.status === "paid" && inv.paidAt)
+            .sort((a, b) => a.paidAt.localeCompare(b.paidAt));
+
+          // 1. Agrupamiento Mensual
+          const monthlyMap = {};
+          paidInvoices.forEach(inv => {
+            const month = inv.paidAt.substring(0, 7); // YYYY-MM
+            monthlyMap[month] = (monthlyMap[month] || 0) + inv.amount;
+          });
+
+          const monthlyList = Object.keys(monthlyMap).sort().map((month, idx, arr) => {
+            const sales = monthlyMap[month];
+            let growth = 0;
+            let firstPeriod = idx === 0;
+            if (!firstPeriod) {
+              const prevSales = monthlyMap[arr[idx - 1]];
+              growth = prevSales ? ((sales - prevSales) / prevSales) * 100 : 100;
+            }
+            return {
+              period: month,
+              label: getMonthLabel(month),
+              sales,
+              growth,
+              firstPeriod
+            };
+          });
+
+          // 2. Agrupamiento Semanal
+          const weeklyMap = {};
+          paidInvoices.forEach(inv => {
+            const monday = getMondayDateStr(inv.paidAt);
+            weeklyMap[monday] = (weeklyMap[monday] || 0) + inv.amount;
+          });
+
+          const weeklyList = Object.keys(weeklyMap).sort().map((monday, idx, arr) => {
+            const sales = weeklyMap[monday];
+            let growth = 0;
+            let firstPeriod = idx === 0;
+            if (!firstPeriod) {
+              const prevSales = weeklyMap[arr[idx - 1]];
+              growth = prevSales ? ((sales - prevSales) / prevSales) * 100 : 100;
+            }
+            return {
+              period: monday,
+              label: `Semana del Lunes ${monday}`,
+              sales,
+              growth,
+              firstPeriod
+            };
+          });
+
+          // Obtener las métricas actuales del mes y semana en curso
+          const currentMonthKey = new Date().toISOString().substring(0, 7);
+          const currentWeekKey = getMondayDateStr(new Date().toISOString().split('T')[0]);
+
+          const lastMonthItem = monthlyList.find(x => x.period === currentMonthKey) || monthlyList[monthlyList.length - 1];
+          const lastWeekItem = weeklyList.find(x => x.period === currentWeekKey) || weeklyList[weeklyList.length - 1];
+
+          const monthlyGrowthPct = lastMonthItem && !lastMonthItem.firstPeriod ? lastMonthItem.growth : null;
+          const weeklyGrowthPct = lastWeekItem && !lastWeekItem.firstPeriod ? lastWeekItem.growth : null;
+
+          return {
+            monthlyList,
+            weeklyList,
+            monthlyGrowthPct,
+            weeklyGrowthPct,
+            lastMonthSales: lastMonthItem ? lastMonthItem.sales : 0,
+            lastWeekSales: lastWeekItem ? lastWeekItem.sales : 0
+          };
+        }, [db.invoices]);
 
         // --- MANEJADORES DE BASE DE DATOS LOCAL ---
         const addClient = (client) => {
@@ -373,7 +475,7 @@
               </header>
 
               <div className="p-4 md:p-8">
-                {activeTab === "overview" && <TabOverview metrics={metrics} db={db} />}
+                {activeTab === "overview" && <TabOverview metrics={metrics} db={db} growthMetrics={growthMetrics} />}
                 {activeTab === "sales" && (
                   <TabSales
                     db={db}
@@ -382,6 +484,7 @@
                     onAddInvoice={addInvoice}
                     onMarkPaid={markInvoicePaid}
                     onDeleteInvoice={deleteInvoice}
+                    growthMetrics={growthMetrics}
                   />
                 )}
                 {activeTab === "cxc" && (
@@ -442,12 +545,26 @@
       // ==========================================
       // TAB: RESUMEN GENERAL (OVERVIEW)
       // ==========================================
-      function TabOverview({ metrics, db }) {
+      function TabOverview({ metrics, db, growthMetrics }) {
         return (
           <div className="space-y-6">
             <div className="grid metric-grid gap-4">
               <Card title="Ventas Totales" value={metrics.totalSales} tone="green" subtext="Solo facturas en estado 'pagada'" />
               <Card title="Cuentas por Cobrar Totales" value={metrics.totalCxC} tone="cyan" subtext="Venta firmada - Efectivo cobrado" formula="Total Contratado - Cobrado Real" />
+              
+              <Card 
+                title="Crecimiento Startup (Mensual)" 
+                value={growthMetrics.monthlyGrowthPct === null ? "N/A" : `${growthMetrics.monthlyGrowthPct >= 0 ? "↑" : "↓"} ${Math.abs(growthMetrics.monthlyGrowthPct).toFixed(1)}%`} 
+                tone={growthMetrics.monthlyGrowthPct === null ? "cyan" : growthMetrics.monthlyGrowthPct >= 0 ? "green" : "amber"} 
+                subtext={growthMetrics.monthlyGrowthPct === null ? "Primer mes sin histórico" : `Ventas: ${currency.format(growthMetrics.lastMonthSales)}`} 
+              />
+              <Card 
+                title="Crecimiento Startup (Semanal)" 
+                value={growthMetrics.weeklyGrowthPct === null ? "N/A" : `${growthMetrics.weeklyGrowthPct >= 0 ? "↑" : "↓"} ${Math.abs(growthMetrics.weeklyGrowthPct).toFixed(1)}%`} 
+                tone={growthMetrics.weeklyGrowthPct === null ? "cyan" : growthMetrics.weeklyGrowthPct >= 0 ? "green" : "amber"} 
+                subtext={growthMetrics.weeklyGrowthPct === null ? "Primera semana sin histórico" : `Ventas: ${currency.format(growthMetrics.lastWeekSales)}`} 
+              />
+
               <Card title="Gastos Operativos (OPEX)" value={metrics.operatingOpex} tone="amber" subtext={`Gastos directos + interés de deuda`} />
               <Card title="Utilidad Operativa" value={metrics.operatingProfit} tone="cyan" subtext="Ventas - OPEX" formula="Ventas Totales - Gastos Operativos" />
               <Card title="Pago de Deuda Mensual" value={metrics.monthlyDebtPayment} tone="purple" subtext="Componente principal + interés pagado" />
@@ -532,7 +649,8 @@
       // ==========================================
       // TAB: VENTAS (INGRESOS)
       // ==========================================
-      function TabSales({ db, onAddClient, onAddContract, onAddInvoice, onMarkPaid, onDeleteInvoice }) {
+      function TabSales({ db, onAddClient, onAddContract, onAddInvoice, onMarkPaid, onDeleteInvoice, growthMetrics }) {
+        const [growthPeriod, setGrowthPeriod] = useState("monthly");
         const [cName, setCName] = useState("");
         const [cInd, setCInd] = useState("SaaS Enterprise");
 
@@ -709,6 +827,97 @@
                       })}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Sección de Crecimiento */}
+            <div className="rounded-lg border border-nodo-line bg-nodo-panel p-5 mt-6">
+              <h3 className="text-lg font-semibold text-white mb-2">Crecimiento y Desempeño de la Startup</h3>
+              <p className="text-xs text-slate-400 mb-6">
+                Monitorea el crecimiento de facturación cobrada real de tu startup agrupado mes a mes y semana a semana.
+              </p>
+              
+              <div className="flex border-b border-nodo-line mb-4">
+                <button 
+                  onClick={() => setGrowthPeriod("monthly")} 
+                  className={`px-4 py-2 text-xs font-semibold border-b-2 transition ${
+                    growthPeriod === "monthly" ? "border-indigo-500 text-white" : "border-transparent text-slate-400 hover:text-white"
+                  }`}
+                >
+                  Crecimiento Mensual (MoM)
+                </button>
+                <button 
+                  onClick={() => setGrowthPeriod("weekly")} 
+                  className={`px-4 py-2 text-xs font-semibold border-b-2 transition ${
+                    growthPeriod === "weekly" ? "border-indigo-500 text-white" : "border-transparent text-slate-400 hover:text-white"
+                  }`}
+                >
+                  Crecimiento Semanal (WoW)
+                </button>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* Tabla de Crecimiento */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead className="bg-white/[0.02] text-[10px] uppercase text-slate-400">
+                      <tr>
+                        <th className="p-3">Período</th>
+                        <th className="p-3">Facturación Cobrada</th>
+                        <th className="p-3 text-right">Crecimiento</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-nodo-line">
+                      {(growthPeriod === "monthly" ? growthMetrics.monthlyList : growthMetrics.weeklyList).length === 0 ? (
+                        <tr>
+                          <td colSpan="3" className="p-4 text-center text-slate-500">No hay ventas cobradas para calcular el crecimiento.</td>
+                        </tr>
+                      ) : (
+                        (growthPeriod === "monthly" ? growthMetrics.monthlyList : growthMetrics.weeklyList).map((item) => (
+                          <tr key={item.period}>
+                            <td className="p-3 font-semibold text-white">{item.label}</td>
+                            <td className="p-3 font-medium text-white">{currency.format(item.sales)}</td>
+                            <td className={`p-3 text-right font-bold ${
+                              item.firstPeriod ? "text-slate-500" : item.growth >= 0 ? "text-nodo-green" : "text-red-400"
+                            }`}>
+                              {item.firstPeriod ? "N/A" : `${item.growth >= 0 ? "↑" : "↓"} ${Math.abs(item.growth).toFixed(1)}%`}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Gráficos Visuales CSS */}
+                <div className="space-y-4 bg-white/[0.01] p-4 rounded-lg border border-nodo-line/50 flex flex-col justify-center">
+                  <h4 className="text-xs uppercase font-bold text-nodo-neon mb-2">Desempeño Visual de Facturación</h4>
+                  {(() => {
+                    const list = growthPeriod === "monthly" ? growthMetrics.monthlyList : growthMetrics.weeklyList;
+                    const maxVal = Math.max(...list.map(x => x.sales), 1);
+                    if (list.length === 0) {
+                      return <p className="text-xs text-slate-500 text-center py-6">Ingrese ventas cobradas para ver la gráfica.</p>;
+                    }
+                    return (
+                      <div className="space-y-3 scrollbar-thin max-h-60 overflow-y-auto pr-2">
+                        {list.map(item => {
+                          const pct = (item.sales / maxVal) * 100;
+                          return (
+                            <div key={`chart-${item.period}`} className="space-y-1">
+                              <div className="flex justify-between text-[11px] text-slate-400">
+                                <span>{item.label}</span>
+                                <span className="font-semibold text-white">{currency.format(item.sales)}</span>
+                              </div>
+                              <div className="h-2 rounded-full bg-white/[0.05]">
+                                <div className="h-2 rounded-full bg-nodo-violet shadow-glow" style={{ width: `${pct}%` }}></div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

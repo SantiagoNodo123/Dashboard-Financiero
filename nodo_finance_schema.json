@@ -50,7 +50,9 @@
     "costPerLead": "marketing_campaigns.investment_amount / marketing_campaigns.leads_count",
     "conversionRate": "(marketing_campaigns.conversions_count / marketing_campaigns.leads_count) * 100",
     "roas": "marketing_campaigns.attributed_revenue / marketing_campaigns.investment_amount",
-    "accountsReceivable": "SUM(sales_contracts.total_contract_value) - SUM(invoices.amount WHERE status = 'paid')"
+    "accountsReceivable": "SUM(sales_contracts.total_contract_value) - SUM(invoices.amount WHERE status = 'paid')",
+    "salesGrowthMoM": "((totalSales(current_month) - totalSales(previous_month)) / totalSales(previous_month)) * 100",
+    "salesGrowthWoW": "((totalSales(current_week) - totalSales(previous_week)) / totalSales(previous_week)) * 100"
   },
   "accountingRules": [
     {
