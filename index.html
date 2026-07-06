@@ -546,6 +546,22 @@
       // TAB: RESUMEN GENERAL (OVERVIEW)
       // ==========================================
       function TabOverview({ metrics, db, growthMetrics }) {
+        const [chartPeriod, setChartPeriod] = useState("monthly");
+
+        const list = chartPeriod === "monthly" ? growthMetrics.monthlyList : growthMetrics.weeklyList;
+        const maxVal = Math.max(...list.map(x => x.sales), 1);
+
+        const getShortLabel = (period, isMonthly) => {
+          if (isMonthly) {
+            const parts = period.split("-");
+            const shortMonths = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+            return `${shortMonths[Number(parts[1]) - 1]} '${parts[0].substring(2)}`;
+          } else {
+            const parts = period.split("-");
+            return `${parts[2]}/${parts[1]}`;
+          }
+        };
+
         return (
           <div className="space-y-6">
             <div className="grid metric-grid gap-4">
@@ -607,6 +623,92 @@
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Gráfica Dinámica de Crecimiento */}
+            <div className="rounded-lg border border-nodo-line bg-nodo-panel p-5 mt-6">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Evolución del Crecimiento de Ventas</h3>
+                  <p className="text-xs text-slate-400">Ventas totales comprometidas y crecimiento porcentual de la startup (criterio devengo).</p>
+                </div>
+                <div className="flex bg-[#0D1321] rounded border border-nodo-line p-0.5">
+                  <button 
+                    onClick={() => setChartPeriod("monthly")} 
+                    className={`px-3 py-1 text-xs font-semibold rounded transition ${
+                      chartPeriod === "monthly" ? "bg-nodo-violet text-white shadow-glow" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Mensual
+                  </button>
+                  <button 
+                    onClick={() => setChartPeriod("weekly")} 
+                    className={`px-3 py-1 text-xs font-semibold rounded transition ${
+                      chartPeriod === "weekly" ? "bg-nodo-violet text-white shadow-glow" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Semanal
+                  </button>
+                </div>
+              </div>
+
+              {list.length === 0 ? (
+                <div className="h-64 flex flex-col items-center justify-center border border-dashed border-nodo-line rounded-lg text-slate-500 text-xs">
+                  No hay ventas registradas para generar el gráfico.
+                </div>
+              ) : (
+                <div className="relative border-b border-l border-nodo-line/50 pb-2 pl-2">
+                  {/* Grid Lines de Fondo */}
+                  <div className="absolute inset-0 flex flex-col justify-between pointer-events-none -z-10 py-4 pl-8">
+                    <div className="border-b border-white/[0.03] w-full"></div>
+                    <div className="border-b border-white/[0.03] w-full"></div>
+                    <div className="border-b border-white/[0.03] w-full"></div>
+                    <div className="border-b border-white/[0.03] w-full"></div>
+                  </div>
+
+                  {/* Barras del Gráfico */}
+                  <div className="flex items-end justify-start gap-4 h-64 px-4 overflow-x-auto scrollbar-thin">
+                    {list.map((item) => {
+                      const pctHeight = (item.sales / maxVal) * 100;
+                      return (
+                        <div key={`overview-chart-${item.period}`} className="flex flex-col items-center justify-end h-full min-w-[50px] flex-1 group relative">
+                          {/* Tooltip */}
+                          <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-20">
+                            <div className="bg-slate-900 border border-nodo-line text-white text-[10px] rounded py-1.5 px-2.5 shadow-xl leading-tight text-center whitespace-nowrap">
+                              <p className="font-bold">{item.label}</p>
+                              <p className="text-nodo-cyan">{currency.format(item.sales)}</p>
+                              <p className={item.firstPeriod ? "text-slate-400" : item.growth >= 0 ? "text-nodo-green" : "text-red-400"}>
+                                {item.firstPeriod ? "Primer período" : `${item.growth >= 0 ? "↑" : "↓"} ${Math.abs(item.growth).toFixed(1)}%`}
+                              </p>
+                            </div>
+                            <div className="w-2 h-2 bg-slate-900 border-r border-b border-nodo-line rotate-45 -mt-1"></div>
+                          </div>
+
+                          {/* Crecimiento porcentual sobre la barra */}
+                          {!item.firstPeriod && (
+                            <span className={`text-[9px] font-bold mb-1.5 px-1 rounded bg-white/5 ${
+                              item.growth >= 0 ? "text-nodo-green" : "text-red-400"
+                            }`}>
+                              {item.growth >= 0 ? "+" : ""}{item.growth.toFixed(0)}%
+                            </span>
+                          )}
+
+                          {/* Barra de altura */}
+                          <div 
+                            className="w-full max-w-[32px] rounded-t bg-gradient-to-t from-nodo-violet to-nodo-cyan shadow-glow transition-all duration-700 ease-out" 
+                            style={{ height: `${Math.max(4, pctHeight)}%` }}
+                          ></div>
+
+                          {/* Nombre del Período */}
+                          <span className="text-[10px] text-slate-500 mt-2 font-medium">
+                            {getShortLabel(item.period, chartPeriod === "monthly")}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         );
